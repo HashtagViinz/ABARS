@@ -11,6 +11,23 @@ from PIL import Image
 import matplotlib.pyplot as plt
 from typing import Dict, Tuple, Any
 from torchvision.transforms import v2
+from logger import log
+from pathlib import Path
+
+# MAP of class IDs to YOLO class indices
+CLASS_MAPPING = {
+    35694: 0, # building
+    35697: 1, # cable-tower
+    35700: 2, # cultivation-mesh-cage
+    35696: 3, # landslide
+    35701: 4, # pool
+    35695: 5, # prefabricated-house
+    35699: 6, # quarry
+    35702: 7, # ship
+    35698: 8, # vehicle
+    35693: 9  # well
+}
+
 
 
 class UAVOD(Dataset):
@@ -124,7 +141,75 @@ class UAVOD(Dataset):
 
         return img, target
     
+
+
+def convert_json_to_yolo(ann_dir: str, labels_out: str) -> None:
+    """
+    Converts JSON annotations to YOLO format.
+    Args: 
+        ann_dir (str) : Directory containing the JSON annotation files.
+        labels_out (str) : Directory where the YOLO formatted label files will be saved.
+
+    """
     
+    os.makedirs(labels_out, exist_ok=True)
+    log(f"[LOG] Starting conversion {labels_out}...", "blue")
+
+    for ann_file in os.listdir(ann_dir):
+        if not ann_file.endswith('.json'): 
+            continue
+
+        ann_path = os.path.join(ann_dir, ann_file)
+        with open(ann_path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        
+        # Dimensioni immagine per normalizzazione
+        img_h = data.get('size', {}).get('height', 0)
+        img_w = data.get('size', {}).get('width', 0)
+
+        if img_h == 0 or img_w == 0:
+            log(f"[WARN] Not valid size {ann_file}, ignored.", "yellow")
+            continue
+
+        yolo_lines = []
+        for obj in data.get('objects', []):
+            cls_id = CLASS_MAPPING.get(obj.get('classId'))
+            if cls_id is None: 
+                continue
+            
+            # Punti exterior: [[x1, y1], [x2, y2]]
+            p = obj.get('points', {}).get('exterior', [])
+            if len(p) < 2:
+                continue
+
+            x1, y1 = p[0]
+            x2, y2 = p[1]
+            
+            # Coordinate bounding box pulite
+            xmin, xmax = min(x1, x2), max(x1, x2)
+            ymin, ymax = min(y1, y2), max(y1, y2)
+
+            # Normalizzazione (0 - 1)
+            x_center = ((xmin + xmax) / 2) / img_w
+            y_center = ((ymin + ymax) / 2) / img_h
+            w = (xmax - xmin) / img_w
+            h = (ymax - ymin) / img_h
+            
+            # Formattazione float a 6 cifre decimali per pulizia
+            yolo_lines.append(f"{cls_id} {x_center} {y_center} {w} {h}")
+
+        # Generazione nome file .txt compatibile
+        # Es: 'frame_001.jpg.json' -> 'frame_001.txt'
+        base_name = Path(ann_file).stem  # rimuove .json
+        if '.' in base_name: 
+            base_name = Path(base_name).stem # rimuove eventuale .jpg / .png
+            
+        txt_path = os.path.join(labels_out, f"{base_name}.txt")
+        
+        with open(txt_path, 'w', encoding='utf-8') as f:
+            f.write('\n'.join(yolo_lines))
+
+    log("[LOG] All the Label are created successfully", "green")
     
     
     
