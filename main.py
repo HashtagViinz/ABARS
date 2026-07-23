@@ -34,7 +34,7 @@ def arg_analyzer() -> None:
     
     args = parser.parse_args()
 
-    
+
     # ? TUNE COMMAND
     if args.command == command.DATASET_PREPARE.value:
         convert_json_to_yolo(
