@@ -13,6 +13,8 @@ from typing import Dict, Tuple, Any
 from torchvision.transforms import v2
 from logger import log
 from pathlib import Path
+import random
+import shutil
 
 # MAP of class IDs to YOLO class indices
 CLASS_MAPPING = {
@@ -142,133 +144,106 @@ class UAVOD(Dataset):
         return img, target
     
 
+def process_and_split_dataset(dataset_dir: str, test_ratio: float = 0.1, val_ratio: float = 0.2, seed: int = 42) -> None:
+    """ 
+    Converts JSON annotations to YOLO format and creates train/val/test folders.
+    Keeps the original dataset unchanged and uses copy to reproduce it.   
+    The function will create two new directories called "images" and "labels"
+    Args:
+        dataset_dir (str) : Directory containing the dataset.
+        test_ratio (float) : Ratio of test samples.
+        val_ratio (float) : Ratio of validation samples.
+        seed (int) : Seed for reproducibility.
 
-def convert_json_to_yolo(ann_dir: str, labels_out: str) -> None:
     """
-    Converts JSON annotations to YOLO format.
-    Args: 
-        ann_dir (str) : Directory containing the JSON annotation files.
-        labels_out (str) : Directory where the YOLO formatted label files will be saved.
+    dataset_path = Path(dataset_dir).resolve()
+    ann_dir = dataset_path / "ann"
+    img_dir = dataset_path / "img"
 
-    """
-    
-    os.makedirs(labels_out, exist_ok=True)
-    log(f"[LOG] Starting conversion {labels_out}...", "blue")
+    labels_out = dataset_path / "labels"
+    images_out = dataset_path / "images"
 
-    for ann_file in os.listdir(ann_dir):
-        if not ann_file.endswith('.json'): 
-            continue
+    # 1. Recupera e mescola i file JSON con seed fisso
+    json_files = [f for f in os.listdir(ann_dir) if f.endswith(".json")]
+    random.seed(seed)
+    random.shuffle(json_files)
 
-        ann_path = os.path.join(ann_dir, ann_file)
-        with open(ann_path, 'r', encoding='utf-8') as f:
-            data = json.load(f)
-        
-        # Dimensioni immagine per normalizzazione
-        img_h = data.get('size', {}).get('height', 0)
-        img_w = data.get('size', {}).get('width', 0)
+    # 2. Calcola lo split
+    total = len(json_files)
+    num_test = int(total * test_ratio)
+    num_val = int(total * val_ratio)
 
-        if img_h == 0 or img_w == 0:
-            log(f"[WARN] Not valid size {ann_file}, ignored.", "yellow")
-            continue
+    splits = {
+        "test": json_files[:num_test],
+        "val": json_files[num_test : num_test + num_val],
+        "train": json_files[num_test + num_val :],
+    }
 
-        yolo_lines = []
-        for obj in data.get('objects', []):
-            cls_id = CLASS_MAPPING.get(obj.get('classId'))
-            if cls_id is None: 
+    log(f"[LOG] Found {total} files", "blue")
+
+    for split_name, files in splits.items():
+        split_label_dir = labels_out / split_name
+        split_img_dir = images_out / split_name
+
+        split_label_dir.mkdir(parents=True, exist_ok=True)
+        split_img_dir.mkdir(parents=True, exist_ok=True)
+
+        for ann_file in files:
+            # --- A. CONVERSIONE JSON -> YOLO TXT ---
+            ann_path = ann_dir / ann_file
+            with open(ann_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+
+            img_h = data.get("size", {}).get("height", 0)
+            img_w = data.get("size", {}).get("width", 0)
+
+            if img_h == 0 or img_w == 0:
                 continue
-            
-            # Punti exterior: [[x1, y1], [x2, y2]]
-            p = obj.get('points', {}).get('exterior', [])
-            if len(p) < 2:
-                continue
 
-            x1, y1 = p[0]
-            x2, y2 = p[1]
-            
-            # Coordinate bounding box pulite
-            xmin, xmax = min(x1, x2), max(x1, x2)
-            ymin, ymax = min(y1, y2), max(y1, y2)
+            yolo_lines = []
+            for obj in data.get("objects", []):
+                cls_id = CLASS_MAPPING.get(obj.get("classId"))
+                if cls_id is None:
+                    continue
 
-            # Normalizzazione (0 - 1)
-            x_center = ((xmin + xmax) / 2) / img_w
-            y_center = ((ymin + ymax) / 2) / img_h
-            w = (xmax - xmin) / img_w
-            h = (ymax - ymin) / img_h
-            
-            # Formattazione float a 6 cifre decimali per pulizia
-            yolo_lines.append(f"{cls_id} {x_center} {y_center} {w} {h}")
+                p = obj.get("points", {}).get("exterior", [])
+                if len(p) < 2:
+                    continue
 
-        # Generazione nome file .txt compatibile
-        # Es: 'frame_001.jpg.json' -> 'frame_001.txt'
-        base_name = Path(ann_file).stem  # rimuove .json
-        if '.' in base_name: 
-            base_name = Path(base_name).stem # rimuove eventuale .jpg / .png
-            
-        txt_path = os.path.join(labels_out, f"{base_name}.txt")
-        
-        with open(txt_path, 'w', encoding='utf-8') as f:
-            f.write('\n'.join(yolo_lines))
+                x1, y1 = p[0]
+                x2, y2 = p[1]
+                xmin, xmax = min(x1, x2), max(x1, x2)
+                ymin, ymax = min(y1, y2), max(y1, y2)
 
-    log("[LOG] All the Label are created successfully", "green")
-    
-    
-    
-    
-if __name__ == "__main__":
-    # Inserisci i tuoi percorsi reali qui
-    img_dir = "dataset/images/train/"
-    ann_dir = "dataset/ann/"
-    
-    # 1. DEFINIAMO LE TRASFORMAZIONI
-    # Usiamo ColorJitter per alterare i colori e la luminosità
-    my_transforms = v2.Compose([
-        v2.ToImage(),  # Converte l'immagine PIL in Tensore (sostituisce F.to_tensor)
-        v2.ColorJitter(brightness=0.6, contrast=0.6, saturation=0.6, hue=0.2), # Applica filtri colore
-        v2.ToDtype(torch.float32, scale=True) # Scala i valori da 0-255 a 0.0-1.0
-    ])
-    
-    # 2. CREIAMO DUE ISTANZE DEL DATASET
-    # Una "liscia" e una con le trasformazioni applicate
-    dataset_original = UAVOD(images_dir=img_dir, annotations_dir=ann_dir, transforms=None)
-    dataset_transformed = UAVOD(images_dir=img_dir, annotations_dir=ann_dir, transforms=my_transforms)
-    
-    # 3. ESTRAIAMO LA STESSA IMMAGINE (Indice 0) DA ENTRAMBI
-    img_orig, target_orig = dataset_original[0]
-    img_trans, target_trans = dataset_transformed[0]
-    
-    # Inverto il dict per avere da indice a nome classe
-    idx_to_class = {v: k for k, v in dataset_original.class_map.items()}
-    
-    # --- ELABORAZIONE IMMAGINE ORIGINALE ---
-    img_orig_uint8 = (img_orig * 255).to(torch.uint8)
-    labels_orig = [idx_to_class[l.item()] for l in target_orig["labels"]]
-    res_orig = draw_bounding_boxes(
-        img_orig_uint8, target_orig["boxes"], labels=labels_orig, colors="red", width=3
-    )
-    
-    # --- ELABORAZIONE IMMAGINE TRASFORMATA ---
-    # Nota: Moltiplichiamo per 255 perché v2.ToDtype l'ha portata nel range 0.0 - 1.0
-    img_trans_uint8 = (img_trans * 255).to(torch.uint8) 
-    labels_trans = [idx_to_class[l.item()] for l in target_trans["labels"]]
-    res_trans = draw_bounding_boxes(
-        img_trans_uint8, target_trans["boxes"], labels=labels_trans, colors="blue", width=3
-    )
-    
-    # --- VISUALIZZAZIONE AFFIANCATA CON MATPLOTLIB ---
-    # Creiamo una figura con 1 riga e 2 colonne
-    fig, axes = plt.subplots(1, 2, figsize=(16, 8))
-    
-    # Disegniamo l'originale a sinistra (axes[0])
-    axes[0].imshow(res_orig.permute(1, 2, 0).numpy())
-    axes[0].set_title("Originale (Nessuna Trasformazione)", fontsize=14)
-    axes[0].axis("off")
-    
-    # Disegniamo la trasformata a destra (axes[1])
-    axes[1].imshow(res_trans.permute(1, 2, 0).numpy())
-    axes[1].set_title("Trasformata (ColorJitter)", fontsize=14)
-    axes[1].axis("off")
-    
-    # Mostriamo il risultato
-    plt.tight_layout()
-    plt.show()
+                x_center = ((xmin + xmax) / 2) / img_w
+                y_center = ((ymin + ymax) / 2) / img_h
+                w = (xmax - xmin) / img_w
+                h = (ymax - ymin) / img_h
 
+                yolo_lines.append(f"{cls_id} {x_center:.6f} {y_center:.6f} {w:.6f} {h:.6f}")
+
+            # Identifica il nome base dell'immagine
+            base_name = Path(ann_file).stem
+            if "." in base_name:
+                base_name = Path(base_name).stem
+
+            # Salva il file .txt nella relativa cartella dello split
+            txt_path = split_label_dir / f"{base_name}.txt"
+            with open(txt_path, "w", encoding="utf-8") as f:
+                f.write("\n".join(yolo_lines))
+
+            # --- B. COPIA DELL'IMMAGINE ---
+            # Cerca l'immagine originale corrispondente (supporta varie estensioni)
+            found_img = None
+            for ext in [".jpg", ".png", ".jpeg", ".JPG", ".PNG"]:
+                candidate = img_dir / f"{base_name}{ext}"
+                if candidate.exists():
+                    found_img = candidate
+                    break
+
+            if found_img:
+                shutil.copy(found_img, split_img_dir / found_img.name)
+
+        log(f"[LOG] Split '{split_name}' completed [{len(files)} files].","green")
+
+    log("[LOG] Dataset entirely prepared successfully!", "green")

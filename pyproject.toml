@@ -3,9 +3,19 @@ name = "abars"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
-requires-python = ">=3.14"
+requires-python = ">=3.10,<3.13"
 dependencies = [
     "mlflow>=3.14.0",
-    "torch>=2.13.0",
+    "torch>=2.2.0",
+    "torchvision",
     "ultralytics>=8.4.104",
 ]
+
+[[tool.uv.index]]
+name = "pytorch-cu121"
+url = "https://download.pytorch.org/whl/cu121"
+explicit = true
+
+[tool.uv.sources]
+torch = { index = "pytorch-cu121" }
+torchvision = { index = "pytorch-cu121" }

@@ -1,0 +1,7 @@
+[91mPyTorch Version: 2.5.1+cu121  [0m
+[91mCUDA Compiled Version in PyTorch: 12.1[0m
+[94m[LOG] Found 844 files[0m
+[92m[LOG] Split 'test' completed [84 files].[0m
+[92m[LOG] Split 'val' completed [168 files].[0m
+[92m[LOG] Split 'train' completed [592 files].[0m
+[92m[LOG] Dataset entirely prepared successfully![0m

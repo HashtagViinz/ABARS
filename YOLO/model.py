@@ -2,13 +2,17 @@ from enum import StrEnum
 import os
 import torch
 from ultralytics import YOLO
-from logger import log, colorize
+from logger import log
 import mlflow
 
 # ! COSTANTS
 YOLO_DIR = os.path.dirname(os.path.abspath(__file__))  # Directory of the current file
 MLFLOW_EXPERIMENT_NAME = "ABARS_YOLO"  # Name of the MLflow experiment
 
+
+# TODO : remove
+log(f"PyTorch Version: {torch.__version__}  ", "red")
+log(f"CUDA Compiled Version in PyTorch: {torch.version.cuda}", "red")
 
 class yolo_model(StrEnum): 
     """

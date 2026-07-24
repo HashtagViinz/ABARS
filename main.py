@@ -1,7 +1,7 @@
-from YOLO import tune_hyperparameters
+from YOLO import tune_hyperparameters, is_GPUs_available
 from parser_command import command
 from YOLO import yolo_model
-from dataset import convert_json_to_yolo
+from dataset import process_and_split_dataset
 import argparse
 from logger import log
 
@@ -17,11 +17,13 @@ def arg_analyzer() -> None:
     parser = argparse.ArgumentParser(description="ABARS - Aereal Building Abuse Recognition System CLI")
     subparsers = parser.add_subparsers(dest="command", help="Available commands")
 
-    # Command to prepare the Dataset for training the YOLO model
+    # 1) Command to prepare the Dataset for training the YOLO model
     dataset_prepare_command = subparsers.add_parser("dataset_prepare", help="Prepare the dataset for YOLO training")
     
-    
-    # Command to test find the Hyperparameters for the YOLO model
+    # 2) Test Hardware Node
+    hardware_test = subparsers.add_parser("hw_test", help="Test hardware node")
+
+    # 3) Command to test find the Hyperparameters for the YOLO model
     tune_hyperparameters_command = subparsers.add_parser("tune", help="Avvia il training del modello YOLO")
     tune_hyperparameters_command.add_argument(
         "--model",
@@ -40,14 +42,16 @@ def arg_analyzer() -> None:
         This command prepare the Dataset in order to be 
         used by YOLO Models
         """
-        convert_json_to_yolo(
-            "dataset/ann/",
-            "dataset/label/"
-        )
-    
+        process_and_split_dataset("dataset",test_ratio=0.1,val_ratio=0.2,seed=42)
+    # ? HW TEST COMMAND
+    elif args.command == command.HW_TEST.value:
+        """
+        This command test the hardware node
+        """
+        device = is_GPUs_available()
 
     # ? TUNE COMMAND
-    if args.command == command.TUNE.value:
+    elif args.command == command.TUNE.value:
         """
         This command try to understands the best hyperparams
         based on hardware of our machine
@@ -59,7 +63,6 @@ def arg_analyzer() -> None:
             optimizer="auto",
             yaml_path=YAML_PATH
         )
-        pass
 
 
 if __name__ == "__main__":
