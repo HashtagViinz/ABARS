@@ -25,24 +25,27 @@ def is_GPUs_available() -> str:
     Returns:
         str: A string representing the available GPUs. If no GPUs are available, it returns 'cpu'.
     """
+    log("Checking HW : ","yellow")
     device_arg = 'cpu'  # Default to CPU if no GPUs are available
     if torch.cuda.is_available():
         gpu_count = torch.cuda.device_count()
         for i in range(gpu_count):
             gpu_name = torch.cuda.get_device_name(i)
-            print(f"- GPU ID {i}: {gpu_name}")
-        device_arg = '0,1' if gpu_count >= 2 else '0'
+            log(f"- GPU ID {i}: {gpu_name}", "yellow")
+        device_arg = ",".join(str(i) for i in range(gpu_count))
+    else:
+        log("Using CPU", "yellow")
     return device_arg
 
 
 def on_epoch_end_callback(trainer) -> None:
     """
-    Callback eseguita da Ultralytics alla fine di ogni epoca.
-    Stampa un riepilogo delle metriche:
+    Callback executed by Ultralytics at the end of each epoch.
+    Prints a summary of the metrics:
  
-    - Epoca corrente / totale epoche
-    - Learning Rate corrente
-    - gpu memory (VRAM) utilizzata
+    - Current epoch / total epochs
+    - Current Learning Rate
+    - gpu memory (VRAM) used
     - Loss di training (media dell'epoca corrente)
     - mAP@50 e mAP@50-95 di validazione
     
