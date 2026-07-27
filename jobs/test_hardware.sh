@@ -1,16 +1,8 @@
 #!/bin/bash
-#SBATCH --job-name=TEST_HW
+#SBATCH --job-name=test_hardware
 #SBATCH --partition=department_only
-
-LOG_DIR="logs"
-LOG_FILE="test_hardware"
-
-log_file="${LOG_DIR}/${LOG_FILE}.log"
-log_err_file="${LOG_DIR}/${LOG_FILE}.err"
-
-#SBATCH --output=${log_file}
-#SBATCH --error=${log_err_file}
-
+#SBATCH --output=logs/%x.out
+#SBATCH --error=logs/%x.err
 #SBATCH --gres=gpu:quadro_rtx_6000:2
 
 # --- FIX PER IL DEADLOCK MULTI-GPU SU SLURM ---

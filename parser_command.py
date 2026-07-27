@@ -8,4 +8,5 @@ class command(StrEnum):
     TUNE = "tune"
     HW_TEST = "hw_test"
     DATASET_PREPARE = "dataset_prepare"
+    TRAIN = "train"
 

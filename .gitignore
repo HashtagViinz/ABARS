@@ -1,3 +1,7 @@
 dataset/
 .vscode/
 .venv/
+__pycache__/
+YOLO/trained_model/
+YOLO/tuning_results/
+YOLO/__pycache__/

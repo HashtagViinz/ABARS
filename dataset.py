@@ -14,6 +14,7 @@ from torchvision.transforms import v2
 from logger import log
 from pathlib import Path
 import random
+from collections import Counter
 import shutil
 
 # MAP of class IDs to YOLO class indices
@@ -142,6 +143,13 @@ class UAVOD(Dataset):
             img = F.to_tensor(img)
 
         return img, target
+    
+    def analyze_class_distribution() -> None:
+        """
+        Function that analyze the distribution of classes in the dataset.
+        Then it will plot the distribution of classes in a bar chart.
+        """
+        pass       
     
 
 def process_and_split_dataset(dataset_dir: str, test_ratio: float = 0.1, val_ratio: float = 0.2, seed: int = 42) -> None:

@@ -119,11 +119,12 @@ def tune_hyperparameters(
     
     tuning_dir = os.path.join(YOLO_DIR, 'tuning_results')
     model_name = model_enum.value.split('.')[0]
-    
+    log_file = f"tune_{model_name}_E{epochs}_Iter{iterations}"
     log(f"START TUNING - {model_name} ", "cyan")
     
     model = YOLO(model_enum.value)
     
+
     model.tune(
         data=yaml_path,
         epochs=epochs,
@@ -131,17 +132,17 @@ def tune_hyperparameters(
         optimizer=optimizer,
         device=devices,
         project=tuning_dir,
-        name=f"tune_{model_name}",
+        name=log_file,
         plots=True,
         save=True
     )
 
-    log(f"Tuning completed! Optimal hyperparameters saved in: {tuning_dir}/tune_{model_name}", "green")
+    log(f"Tuning completed! Optimal hyperparameters saved in: {tuning_dir}/{log_file}", "green")
  
  
  
  
-def train_model(model: yolo_model, epochs: int, btch_size:int, img_size:int, learning_rate: float, patience: int, yaml_path: str) -> None:
+def train_model(model: yolo_model, epochs: int, btch_size:int, img_size:int, patience: int, yaml_path: str, cfg_path: str, name:str = None) -> None:
     """
     Function to train the YOLO model.
     Is Setupped to log training metrics using MLflow and the on_epoch_end_callback.
@@ -151,11 +152,10 @@ def train_model(model: yolo_model, epochs: int, btch_size:int, img_size:int, lea
         epochs (int): Number of training epochs.
         btch_size (int): Batch size for training.
         img_size (int): Image size for training.
-        learning_rate (float): Learning rate for training.
         patience (int): Number of epochs with no improvement.
         yaml_path (str): Path to the dataset YAML file.
-        run_path (str): Path to save the training results.
-        
+        cfg_path (str): Path to use the best hyperprameters YAML file.
+        name (str): Top Level name to identify the Model.
     """
     
     mlflow.set_experiment(MLFLOW_EXPERIMENT_NAME)     #Setup MLflow experiment 
@@ -173,10 +173,10 @@ def train_model(model: yolo_model, epochs: int, btch_size:int, img_size:int, lea
         # ! Starting the training process
         results = model.train(
             data=yaml_path,
+            cfg=cfg_path,
             epochs=epochs,      
             imgsz=img_size,         
-            batch=btch_size,            
-            lr0=learning_rate,           
+            batch=btch_size,                       
             device=devices,       
             name=model_name,
             project=trained_models_dir,
@@ -185,7 +185,7 @@ def train_model(model: yolo_model, epochs: int, btch_size:int, img_size:int, lea
             save_period=1
         )    
     
-    log(f"Training Done. Result in : {results.save_dir}", "green")
+    log(f"Training Done. Result in : {trained_models_dir}", "green")
 
     
     

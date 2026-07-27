@@ -1,21 +1,8 @@
 #!/bin/bash
-
-
-LOG_DIR="logs"
-LOG_FILE="test_hyperparams"
-
-log_file="${LOG_DIR}/${LOG_FILE}.log"
-log_err_file="${LOG_DIR}/${LOG_FILE}.err"
-
-# Clean old Log File
-rm -rf ${log_file} ${log_err_file}
-
-
-#SBATCH --job-name=TEST_HyperParams
+#SBATCH --job-name=hyperparams_test
 #SBATCH --partition=department_only
-#SBATCH --output=${log_file}
-#SBATCH --error=${log_err_file}
-
+#SBATCH --output=logs/%x.out
+#SBATCH --error=logs/%x.err
 #SBATCH --gres=gpu:quadro_rtx_6000:2
 
 
@@ -32,4 +19,4 @@ echo "=== nvidia-smi ===="
 nvidia-smi
 echo "================="
 
-uv run main.py tune --model nano
+uv run main.py tune --model small

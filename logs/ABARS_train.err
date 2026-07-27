@@ -1,0 +1,17 @@
+/home/vsalvatore/ABARS/.venv/lib/python3.12/site-packages/torch/utils/data/dataloader.py:617: UserWarning: This DataLoader will create 8 worker processes in total. Our suggested max number of worker in current system is 2, which is smaller than what this DataLoader is going to create. Please be aware that excessive worker creation might get DataLoader running slow or even freeze, lower the worker number to avoid potential slowness/freeze if necessary.
+  warnings.warn(
+/home/vsalvatore/ABARS/.venv/lib/python3.12/site-packages/torch/utils/data/dataloader.py:617: UserWarning: This DataLoader will create 8 worker processes in total. Our suggested max number of worker in current system is 2, which is smaller than what this DataLoader is going to create. Please be aware that excessive worker creation might get DataLoader running slow or even freeze, lower the worker number to avoid potential slowness/freeze if necessary.
+  warnings.warn(
+/home/vsalvatore/ABARS/.venv/lib/python3.12/site-packages/torch/utils/data/dataloader.py:617: UserWarning: This DataLoader will create 3 worker processes in total. Our suggested max number of worker in current system is 2, which is smaller than what this DataLoader is going to create. Please be aware that excessive worker creation might get DataLoader running slow or even freeze, lower the worker number to avoid potential slowness/freeze if necessary.
+  warnings.warn(
+/home/vsalvatore/ABARS/.venv/lib/python3.12/site-packages/torch/utils/data/dataloader.py:617: UserWarning: This DataLoader will create 3 worker processes in total. Our suggested max number of worker in current system is 2, which is smaller than what this DataLoader is going to create. Please be aware that excessive worker creation might get DataLoader running slow or even freeze, lower the worker number to avoid potential slowness/freeze if necessary.
+  warnings.warn(
+Traceback (most recent call last):
+  File "/home/vsalvatore/ABARS/main.py", line 116, in <module>
+    arg_analyzer()
+  File "/home/vsalvatore/ABARS/main.py", line 101, in arg_analyzer
+    train_model(
+  File "/home/vsalvatore/ABARS/YOLO/model.py", line 188, in train_model
+    log(f"Training Done. Result in : {results.save_dir}", "green")
+                                      ^^^^^^^^^^^^^^^^
+AttributeError: 'dict' object has no attribute 'save_dir'
