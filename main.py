@@ -59,6 +59,11 @@ def arg_analyzer() -> None:
         required=False,
         help="Top Level name to identify the Model.",
     )
+    train_command.add_argument(
+        "--baseline",
+        action="store_true",
+        help="Ignore tuned hyperparameters and use YOLO defaults for a baseline run.",
+    )
 
     # 5) Command to test MLflow
     mlflow_test_command = subparsers.add_parser("mlflow_test", help="Test MLflow logging and connection")
@@ -106,11 +111,14 @@ def arg_analyzer() -> None:
         model_name = args.model.value.split('.')[0]
         dynamic_cfg_path = f"YOLO/tuning_results/tune_{model_name}_E30_Iter30/best_hyperparameters.yaml"
         
-        if os.path.exists(dynamic_cfg_path):
+        if not args.baseline and os.path.exists(dynamic_cfg_path):
             log(f"[INFO] Uso gli iperparametri custom da: {dynamic_cfg_path}", "blue")
             cfg_path_to_use = dynamic_cfg_path
         else:
-            log(f"[INFO] Nessun file di tuning trovato per {model_name}. Uso i default di YOLO.", "yellow")
+            if args.baseline:
+                log(f"[INFO] Modalità BASELINE forzata. Uso i default di YOLO ignorando il file di tuning.", "yellow")
+            else:
+                log(f"[INFO] Nessun file di tuning trovato per {model_name}. Uso i default di YOLO.", "yellow")
             cfg_path_to_use = None
 
         train_model(
