@@ -137,6 +137,29 @@ def tune_hyperparameters(
     log(f"Tuning completed! Optimal hyperparameters saved in: {tuning_dir}/{log_file}", "green")
  
  
+def test_mlflow() -> None:
+    """
+    Function to test MLflow connection and logging.
+    """
+    log("Testing MLflow connection...", "yellow")
+    yolo_dir = os.path.dirname(os.path.abspath(__file__))
+    
+    if not os.environ.get("MLFLOW_TRACKING_URI"):
+        project_root = os.path.dirname(yolo_dir)
+        db_path = os.path.join(project_root, "mlflow.db")
+        mlflow.set_tracking_uri(f"sqlite:///{db_path}")
+        log(f"Using local DB: sqlite:///{db_path}", "cyan")
+    else:
+        log(f"Using MLFLOW_TRACKING_URI: {os.environ.get('MLFLOW_TRACKING_URI')}", "cyan")
+        
+    mlflow.set_experiment(MLFLOW_EXPERIMENT_NAME + "_TEST")
+    
+    with mlflow.start_run(run_name="test_connection"):
+        mlflow.log_param("test_param", "successful")
+        mlflow.log_metric("test_metric", 1.0)
+        log("Logged test param and metric successfully.", "green")
+        
+    log("MLflow test completed! Check your DB or UI.", "green")
  
  
 def train_model(model: yolo_model, epochs: int, btch_size:int, img_size:int, patience: int, yaml_path: str, cfg_path: str, name:str = None) -> None:
@@ -155,32 +178,37 @@ def train_model(model: yolo_model, epochs: int, btch_size:int, img_size:int, pat
         name (str): Top Level name to identify the Model.
     """
     
-    mlflow.set_experiment(MLFLOW_EXPERIMENT_NAME)     #Setup MLflow experiment 
-    
     model_name = model.value.split('.')[0]  # Extract model name without extension
     devices = is_GPUs_available()   # Check device availability (GPU or CPU)
-    model = YOLO(model.value)       # Load the specified YOLO model
-    model.add_callback("on_epoch_end", on_epoch_end_callback)   # Add the Callback for logging
+    yolo_model_instance = YOLO(model.value)       # Load the specified YOLO model
+    yolo_model_instance.add_callback("on_epoch_end", on_epoch_end_callback)   # Add the Callback for logging
     
     yolo_dir = os.path.dirname(os.path.abspath(__file__))
     trained_models_dir = os.path.join(yolo_dir, 'trained_model')
+
+    # Configura MLflow: se l'ambiente non specifica un URI, usa il file mlflow.db locale
+    if not os.environ.get("MLFLOW_TRACKING_URI"):
+        project_root = os.path.dirname(yolo_dir)
+        db_path = os.path.join(project_root, "mlflow.db")
+        mlflow.set_tracking_uri(f"sqlite:///{db_path}")
+
+    mlflow.set_experiment(MLFLOW_EXPERIMENT_NAME)     #Setup MLflow experiment 
+
     
-    # ! Starting the MLflow run 
-    with mlflow.start_run(run_name=f"train_{model_name}"):
-        # ! Starting the training process
-        results = model.train(
-            data=yaml_path,
-            cfg=cfg_path,
-            epochs=epochs,      
-            imgsz=img_size,         
-            batch=btch_size,                       
-            device=devices,       
-            name=model_name,
-            project=trained_models_dir,
-            patience=patience,
-            save=True,
-            save_period=1
-        )    
+    # ! Starting the training process
+    results = yolo_model_instance.train(
+        data=yaml_path,
+        cfg=cfg_path,
+        epochs=epochs,      
+        imgsz=img_size,         
+        batch=btch_size,                       
+        device=devices,       
+        name=model_name,
+        project=trained_models_dir,
+        patience=patience,
+        save=True,
+        save_period=1
+    )    
     
     log(f"Training Done. Result in : {trained_models_dir}", "green")
 

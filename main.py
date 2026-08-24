@@ -60,6 +60,9 @@ def arg_analyzer() -> None:
         help="Top Level name to identify the Model.",
     )
 
+    # 5) Command to test MLflow
+    mlflow_test_command = subparsers.add_parser("mlflow_test", help="Test MLflow logging and connection")
+
     args = parser.parse_args()
 
 
@@ -118,8 +121,10 @@ def arg_analyzer() -> None:
             name = args.name if args.name is not None else None
         )
 
-    
-    
-
+    # ? MLFLOW TEST COMMAND
+    elif args.command == command.MLFLOW_TEST.value:
+        from YOLO.model import test_mlflow
+        test_mlflow()
+        
 if __name__ == "__main__":
     arg_analyzer()
