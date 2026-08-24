@@ -206,7 +206,7 @@ def train_model(model: yolo_model, epochs: int, btch_size:int, img_size:int, pat
         imgsz=img_size,         
         batch=btch_size,                       
         device=devices,       
-        name=model_name,
+        name=name if name else model_name,
         project=trained_models_dir,
         patience=patience,
         save=True,
