@@ -7,7 +7,6 @@ from logger import log
 
 
 YAML_PATH = "dataset/uavod10.yaml"  # Path to the dataset YAML file
-CFG_PATH = "YOLO/tuning_results/tune_yolov8s_E30_Iter30/best_hyperparameters.yaml"   # Path to the best hyperparameters YAML file
 
 
 def arg_analyzer() -> None:
@@ -97,7 +96,17 @@ def arg_analyzer() -> None:
         This command train the YOLO model based on the best hyperparameters
         found during the tuning process.
         """
-           
+        import os
+        model_name = args.model.value.split('.')[0]
+        dynamic_cfg_path = f"YOLO/tuning_results/tune_{model_name}_E30_Iter30/best_hyperparameters.yaml"
+        
+        if os.path.exists(dynamic_cfg_path):
+            log(f"[INFO] Uso gli iperparametri custom da: {dynamic_cfg_path}", "blue")
+            cfg_path_to_use = dynamic_cfg_path
+        else:
+            log(f"[INFO] Nessun file di tuning trovato per {model_name}. Uso i default di YOLO.", "yellow")
+            cfg_path_to_use = None
+
         train_model(
             model = args.model,
             epochs = args.epochs,
@@ -105,7 +114,7 @@ def arg_analyzer() -> None:
             btch_size = 32,
             img_size = 1024,
             yaml_path = YAML_PATH,
-            cfg_path = CFG_PATH,
+            cfg_path = cfg_path_to_use,
             name = args.name if args.name is not None else None
         )
 

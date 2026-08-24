@@ -144,7 +144,7 @@ class UAVOD(Dataset):
 
         return img, target
     
-    def analyze_class_distribution() -> None:
+    def analyze_class_distribution(self) -> None:
         """
         Function that analyze the distribution of classes in the dataset.
         Then it will plot the distribution of classes in a bar chart.

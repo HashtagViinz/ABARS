@@ -10,9 +10,6 @@ YOLO_DIR = os.path.dirname(os.path.abspath(__file__))  # Directory of the curren
 MLFLOW_EXPERIMENT_NAME = "ABARS_YOLO"  # Name of the MLflow experiment
 
 
-# TODO : remove
-log(f"PyTorch Version: {torch.__version__}  ", "red")
-log(f"CUDA Compiled Version in PyTorch: {torch.version.cuda}", "red")
 
 class yolo_model(StrEnum): 
     """
