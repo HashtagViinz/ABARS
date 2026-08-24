@@ -1,7 +1,7 @@
 from enum import StrEnum
 import os
 import torch
-from ultralytics import YOLO
+from ultralytics import YOLO, settings
 from logger import log
 import mlflow
 
@@ -9,7 +9,10 @@ import mlflow
 YOLO_DIR = os.path.dirname(os.path.abspath(__file__))  # Directory of the current file
 MLFLOW_EXPERIMENT_NAME = "ABARS_YOLO"  # Name of the MLflow experiment
 
-
+# Configura Ultralytics per scaricare i modelli base in YOLO/base_models
+BASE_MODELS_DIR = os.path.join(YOLO_DIR, 'base_models')
+os.makedirs(BASE_MODELS_DIR, exist_ok=True)
+settings.update({'weights_dir': BASE_MODELS_DIR})
 
 class yolo_model(StrEnum): 
     """
