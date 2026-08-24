@@ -79,7 +79,10 @@ def arg_analyzer() -> None:
         This command test the hardware node
         """
         device = is_GPUs_available()
-
+    # ? MLFLOW TEST COMMAND
+    elif args.command == command.MLFLOW_TEST.value:
+        from YOLO.model import test_mlflow
+        test_mlflow()
     # ? TUNE COMMAND
     elif args.command == command.TUNE.value:
         """
@@ -121,10 +124,7 @@ def arg_analyzer() -> None:
             name = args.name if args.name is not None else None
         )
 
-    # ? MLFLOW TEST COMMAND
-    elif args.command == command.MLFLOW_TEST.value:
-        from YOLO.model import test_mlflow
-        test_mlflow()
+    
         
 if __name__ == "__main__":
     arg_analyzer()
