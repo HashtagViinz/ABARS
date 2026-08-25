@@ -64,6 +64,13 @@ def arg_analyzer() -> None:
         action="store_true",
         help="Ignore tuned hyperparameters and use YOLO defaults for a baseline run.",
     )
+    train_command.add_argument(
+        "--filter",
+        type=str,
+        choices=["none", "clahe", "sharpen", "white_balance", "grayscale", "all"],
+        default="none",
+        help="Applica un filtro CV on-the-fly tramite Albumentations."
+    )
 
     # 5) Command to test MLflow
     mlflow_test_command = subparsers.add_parser("mlflow_test", help="Test MLflow logging and connection")
@@ -129,7 +136,8 @@ def arg_analyzer() -> None:
             img_size = 1024,
             yaml_path = YAML_PATH,
             cfg_path = cfg_path_to_use,
-            name = args.name if args.name is not None else None
+            name = args.name if args.name is not None else None,
+            filter_type = args.filter
         )
 
     

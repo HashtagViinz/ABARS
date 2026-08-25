@@ -15,3 +15,8 @@ Quando lavori su questo progetto, devi rispettare rigorosamente le seguenti rego
 7. **Strategia Modelli Aerei (UAV)**:
    - Il tuning genetico di YOLOv8 su questo dataset produce box nettamente più precisi (Loss molto più basse) anche se può apparire un leggero calo di Recall. 
    - La strategia ufficiale del progetto prevede di **usare sempre i parametri Tuned** e compensare i falsi negativi (Recall) implementando **pipeline di Computer Vision (CV)** in fase di pre-processing (es. filtri CLAHE, dehazing, sharpening) per esaltare i dettagli sfocati o in ombra.
+8. **Gestione Git e File Pesi**: 
+   - I file dei pesi di base (`.pt`) NON devono mai essere tracciati da Git nella root del progetto (esiste la regola `/*.pt` nel `.gitignore` per evitarlo).
+   - Qualsiasi peso di base o nuovo scaricamento deve avvenire esclusivamente dentro `YOLO/base_models/`.
+9. **Valutazione Metriche**:
+   - Se l'utente chiede un parere sui risultati di addestramento su MLflow, l'agente deve consultare le linee guida presenti in `YOLO/METRICS_GUIDE.md` (le Loss come `box_loss`, `cls_loss`, `dfl_loss` devono essere vicine allo 0, mentre `mAP` e `recall` vicine a 1).

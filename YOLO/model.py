@@ -165,7 +165,9 @@ def test_mlflow() -> None:
     log("MLflow test completed! Check your DB or UI.", "green")
  
  
-def train_model(model: yolo_model, epochs: int, btch_size:int, img_size:int, patience: int, yaml_path: str, cfg_path: str, name:str = None) -> None:
+from cv.albumentations_hook import inject_custom_albumentations
+
+def train_model(model: yolo_model, epochs: int, btch_size:int, img_size:int, patience: int, yaml_path: str, cfg_path: str, name:str = None, filter_type: str = "none") -> None:
     """
     Function to train the YOLO model.
     Is Setupped to log training metrics using MLflow and the on_epoch_end_callback.
@@ -179,6 +181,7 @@ def train_model(model: yolo_model, epochs: int, btch_size:int, img_size:int, pat
         yaml_path (str): Path to the dataset YAML file.
         cfg_path (str): Path to use the best hyperprameters YAML file.
         name (str): Top Level name to identify the Model.
+        filter_type (str): Type of CV filter to apply on-the-fly.
     """
     
     model_name = model.value.split('.')[0]  # Extract model name without extension
@@ -196,8 +199,10 @@ def train_model(model: yolo_model, epochs: int, btch_size:int, img_size:int, pat
         mlflow.set_tracking_uri(f"sqlite:///{db_path}")
 
     mlflow.set_experiment(MLFLOW_EXPERIMENT_NAME)     #Setup MLflow experiment 
-
     
+    # Inietta i filtri Albumentations scelti
+    inject_custom_albumentations(filter_type)
+
     # ! Starting the training process
     results = yolo_model_instance.train(
         data=yaml_path,
