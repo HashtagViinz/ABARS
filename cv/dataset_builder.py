@@ -29,7 +29,7 @@ def build_filtered_dataset(source_yaml: str, filters_list: list[str]):
     combo_name = "_".join(filters_list)
     source_dir = Path("dataset")
     target_dir = Path(f"dataset_{combo_name}")
-    # new_yaml_path already defined
+    new_yaml_path = target_dir / f"uavod10_{combo_name}.yaml"
     
     if target_dir.exists() and new_yaml_path.exists():
         log(f"Il dataset {target_dir} esiste gia'. Nessuna generazione necessaria.", "yellow")
