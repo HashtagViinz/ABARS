@@ -23,4 +23,4 @@ export PYTHONUNBUFFERED=1         # Stampa i log in tempo reale senza buffering
 # --filter clahe grayscale
 # Se non metti --filter, usera' il dataset standard a colori.
 
-uv run main.py train --model small --epochs 80 --patience 10 --name test_ibrido --filter clahe grayscale
+uv run main.py train --model small --epochs 200 --patience 20 --name test_ibrido --filter clahe grayscale

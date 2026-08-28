@@ -17,4 +17,4 @@ export PYTHONUNBUFFERED=1         # Stampa i log in tempo reale senza buffering
 # --name: Nome con cui il run apparira' nella dashboard di MLflow
 # --filter: Il filtro da applicare (clahe, sharpen, white_balance, all)
 
-uv run main.py train --model small --epochs 80 --patience 10 --name tuned_clahe --filter clahe
+uv run main.py train --model small --epochs 200 --patience 20 --name tuned_clahe --filter clahe
