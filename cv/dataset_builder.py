@@ -48,9 +48,10 @@ def build_filtered_dataset(source_yaml: str, filters_list: list[str]):
             continue
             
         images = list(src_img_dir.glob("*.jpg"))
-        log(f"Processando {len(images)} immagini per lo split '{split}'...", "cyan")
+        total_imgs = len(images)
+        log(f"Processando {total_imgs} immagini per lo split '{split}'...", "cyan")
         
-        for img_path in images:
+        for idx, img_path in enumerate(images):
             # 1. Applica filtro all'immagine
             img = cv2.imread(str(img_path))
             if img is None:
@@ -67,6 +68,10 @@ def build_filtered_dataset(source_yaml: str, filters_list: list[str]):
             if lbl_path.exists():
                 target_lbl_path = target_dir / "labels" / split / lbl_path.name
                 shutil.copy(lbl_path, target_lbl_path)
+            
+            # Logga il progresso ogni 100 immagini
+            if (idx + 1) % 100 == 0 or (idx + 1) == total_imgs:
+                log(f"[{split}] Progresso: {idx + 1}/{total_imgs} immagini elaborate", "blue")
                 
     # Crea il nuovo file yaml
     new_yaml_path = target_dir / f"uavod10_{combo_name}.yaml"

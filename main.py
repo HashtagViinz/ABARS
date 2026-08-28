@@ -146,10 +146,13 @@ def arg_analyzer() -> None:
 
         # Se c'è un filtro, generiamo il dataset invisibilmente e aggiorniamo lo yaml!
         if "none" not in args.filter:
+            log(f"Rilevati filtri in input: {args.filter}. Avvio il dataloader generativo...", "yellow")
             from cv.dataset_builder import build_filtered_dataset
             # args.filter ora è una lista, es. ["clahe", "grayscale"]
             dataset_path = build_filtered_dataset(args.dataset, args.filter)
+            log(f"YOLO ricevera' il dataset generato da: {dataset_path}", "green")
         else:
+            log("Nessun filtro rilevato, procedo col dataset standard a colori.", "yellow")
             dataset_path = args.dataset
 
         train_model(
