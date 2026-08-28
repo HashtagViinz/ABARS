@@ -20,3 +20,10 @@ Quando lavori su questo progetto, devi rispettare rigorosamente le seguenti rego
    - Qualsiasi peso di base o nuovo scaricamento deve avvenire esclusivamente dentro `YOLO/base_models/`.
 9. **Valutazione Metriche**:
    - Se l'utente chiede un parere sui risultati di addestramento su MLflow, l'agente deve consultare le linee guida presenti in `YOLO/METRICS_GUIDE.md` (le Loss come `box_loss`, `cls_loss`, `dfl_loss` devono essere vicine allo 0, mentre `mAP` e `recall` vicine a 1).
+10. **Pipeline di Computer Vision (Dataset Builder OOP)**:
+    - Non applicare filtri di Computer Vision tramite "Monkey Patching" on-the-fly su YOLO/Albumentations. A causa dell'uso di `spawn` nei workers multiprocessing, YOLOv8 elude le modifiche runtime in memoria.
+    - Tutti i filtri CV vanno scritti come oggetti puri (es. `CLAHEFilter`) dentro `cv/filters.py`.
+    - Quando si lancia il train con il parametro `--filter` (es. `--filter clahe grayscale`), il codice usa `cv/dataset_builder.py` per generare fisicamente una copia temporanea su disco del dataset filtrato (es. `dataset_clahe_grayscale/`). Questo file yaml viene poi automaticamente passato a YOLO per un addestramento sicuro al 100%. Le cartelle generate sono coperte dal `.gitignore`.
+11. **Sviluppo Immediatamente Successivo (Offline Tiling)**:
+    - La Data Augmentation per variazioni (Mosaic, Flips, etc) è già coperta nativamente da YOLO.
+    - Il prossimo step fondamentale da implementare è l'**Offline Tiling (Dataset Slicing)**: creare uno script che prende le immagini ad alta risoluzione, le taglia in piastrelle più piccole (es. grid 2x2) e ricalcola i Bounding Box. Questo moltiplicherà la dimensione del dataset ed eviterà che YOLO distrugga i piccoli oggetti (es. auto, edifici piccoli) quando comprime tutto a 640/1024px.
