@@ -165,9 +165,8 @@ def test_mlflow() -> None:
     log("MLflow test completed! Check your DB or UI.", "green")
  
  
-from cv.albumentations_hook import inject_custom_albumentations
 
-def train_model(model: yolo_model, epochs: int, btch_size:int, img_size:int, patience: int, yaml_path: str, cfg_path: str, name:str = None, filter_type: str = "none") -> None:
+def train_model(model: yolo_model, epochs: int, btch_size:int, img_size:int, patience: int, yaml_path: str, cfg_path: str, name:str = None) -> None:
     """
     Function to train the YOLO model.
     Is Setupped to log training metrics using MLflow and the on_epoch_end_callback.
@@ -181,28 +180,33 @@ def train_model(model: yolo_model, epochs: int, btch_size:int, img_size:int, pat
         yaml_path (str): Path to the dataset YAML file.
         cfg_path (str): Path to use the best hyperprameters YAML file.
         name (str): Top Level name to identify the Model.
-        filter_type (str): Type of CV filter to apply on-the-fly.
     """
     
     model_name = model.value.split('.')[0]  # Extract model name without extension
-    devices = is_GPUs_available()   # Check device availability (GPU or CPU)
+    
+    # Configure MLflow variables BEFORE loading the YOLO model
+    # MLflow trackig uri logic setup
+    mlflow_tracking_uri = os.environ.get("MLFLOW_TRACKING_URI")
+    
+    if mlflow_tracking_uri:
+        # User defined an external mlflow server (SLURM/Cluster)
+        log(f"Using external MLflow server: {mlflow_tracking_uri}", "blue")
+        mlflow.set_tracking_uri(mlflow_tracking_uri)
+    else:
+        # Default local sqlite database
+        db_path = os.path.join(os.getcwd(), 'mlflow.db')
+        log(f"Using local MLflow database: {db_path}", "blue")
+        mlflow.set_tracking_uri(f"sqlite:///{db_path}")
+
+    mlflow.set_experiment(MLFLOW_EXPERIMENT_NAME)     #Setup MLflow experiment 
+    
     yolo_model_instance = YOLO(model.value)       # Load the specified YOLO model
     yolo_model_instance.add_callback("on_epoch_end", on_epoch_end_callback)   # Add the Callback for logging
     
     yolo_dir = os.path.dirname(os.path.abspath(__file__))
     trained_models_dir = os.path.join(yolo_dir, 'trained_model')
-
-    # Configura MLflow: se l'ambiente non specifica un URI, usa il file mlflow.db locale
-    if not os.environ.get("MLFLOW_TRACKING_URI"):
-        project_root = os.path.dirname(yolo_dir)
-        db_path = os.path.join(project_root, "mlflow.db")
-        mlflow.set_tracking_uri(f"sqlite:///{db_path}")
-
-    mlflow.set_experiment(MLFLOW_EXPERIMENT_NAME)     #Setup MLflow experiment 
+    devices = is_GPUs_available()   # Check device availability (GPU or CPU)
     
-    # Inietta i filtri Albumentations scelti
-    inject_custom_albumentations(filter_type)
-
     # ! Starting the training process
     results = yolo_model_instance.train(
         data=yaml_path,

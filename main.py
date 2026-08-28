@@ -65,11 +65,27 @@ def arg_analyzer() -> None:
         help="Ignore tuned hyperparameters and use YOLO defaults for a baseline run.",
     )
     train_command.add_argument(
-        "--filter",
+        "--dataset",
         type=str,
-        choices=["none", "clahe", "sharpen", "white_balance", "grayscale", "all"],
-        default="none",
-        help="Applica un filtro CV on-the-fly tramite Albumentations."
+        default="dataset/uavod10.yaml",
+        help="Percorso al file yaml del dataset (default: dataset/uavod10.yaml)."
+    )
+    train_command.add_argument(
+        "--filter",
+        nargs="+",
+        type=str,
+        default=["none"],
+        help="Lista di filtri da applicare (es. --filter clahe grayscale)."
+    )
+
+    # 4.5) Command to generate static filtered dataset
+    generate_command = subparsers.add_parser("generate_dataset", help="Genera una copia fisica del dataset applicando un filtro CV.")
+    generate_command.add_argument(
+        "--filter",
+        nargs="+",
+        type=str,
+        required=True,
+        help="Lista di filtri da applicare (es. --filter clahe grayscale)."
     )
 
     # 5) Command to test MLflow
@@ -128,17 +144,28 @@ def arg_analyzer() -> None:
                 log(f"[INFO] Nessun file di tuning trovato per {model_name}. Uso i default di YOLO.", "yellow")
             cfg_path_to_use = None
 
+        # Se c'è un filtro, generiamo il dataset invisibilmente e aggiorniamo lo yaml!
+        if "none" not in args.filter:
+            from cv.dataset_builder import build_filtered_dataset
+            # args.filter ora è una lista, es. ["clahe", "grayscale"]
+            dataset_path = build_filtered_dataset(args.dataset, args.filter)
+        else:
+            dataset_path = args.dataset
+
         train_model(
-            model = args.model,
-            epochs = args.epochs,
-            patience = args.patience,
-            btch_size = 32,
-            img_size = 1024,
-            yaml_path = YAML_PATH,
-            cfg_path = cfg_path_to_use,
-            name = args.name if args.name is not None else None,
-            filter_type = args.filter
+            model=args.model,
+            epochs=args.epochs,
+            btch_size=args.batch_size,
+            img_size=1024,
+            patience=args.patience,
+            yaml_path=dataset_path,
+            cfg_path=cfg_path_to_use,
+            name=args.name if args.name is not None else None
         )
+
+    elif args.command == "generate_dataset":
+        from cv.dataset_builder import build_filtered_dataset
+        build_filtered_dataset(YAML_PATH, args.filter)
 
     
         
