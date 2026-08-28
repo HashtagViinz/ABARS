@@ -55,6 +55,9 @@ Trains the YOLO model. If tuning results exist for the chosen model, they are au
 # Train using tuned hyperparameters (if available)
 uv run main.py train --model small --epochs 80 --patience 10 --name my_tuned_model
 
+# Train using CV Filters (automatically generates physical dataset transparently)
+uv run main.py train --model small --epochs 80 --patience 10 --name my_clahe_model --filter clahe grayscale
+
 # Train using YOLO defaults (Baseline mode)
 uv run main.py train --model small --epochs 80 --patience 10 --name my_baseline --baseline
 ```
