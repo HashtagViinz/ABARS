@@ -158,7 +158,7 @@ def arg_analyzer() -> None:
         train_model(
             model=args.model,
             epochs=args.epochs,
-            btch_size=args.batch_size,
+            btch_size=32,
             img_size=1024,
             patience=args.patience,
             yaml_path=dataset_path,
