@@ -29,10 +29,11 @@ def build_filtered_dataset(source_yaml: str, filters_list: list[str]):
     combo_name = "_".join(filters_list)
     source_dir = Path("dataset")
     target_dir = Path(f"dataset_{combo_name}")
+    # new_yaml_path already defined
     
-    if target_dir.exists():
+    if target_dir.exists() and new_yaml_path.exists():
         log(f"Il dataset {target_dir} esiste gia'. Nessuna generazione necessaria.", "yellow")
-        return target_dir / f"uavod10_{combo_name}.yaml"
+        return new_yaml_path
         
     log(f"Inizio generazione del dataset modificato: {target_dir}", "blue")
     
@@ -74,7 +75,7 @@ def build_filtered_dataset(source_yaml: str, filters_list: list[str]):
                 log(f"[{split}] Progresso: {idx + 1}/{total_imgs} immagini elaborate", "blue")
                 
     # Crea il nuovo file yaml
-    new_yaml_path = target_dir / f"uavod10_{combo_name}.yaml"
+    # new_yaml_path already defined
     with open(new_yaml_path, "w") as f:
         # Percorsi assoluti richiesti da YOLO per evitare confusioni
         abs_target = target_dir.absolute()
