@@ -19,18 +19,11 @@ def build_tiled_dataset(source_yaml: str, overlap_ratio: float = 0.1) -> str:
     with open(source_path, "r") as f:
         data_yaml = yaml.safe_load(f)
         
-    yaml_path_value = data_yaml.get('path', '')
-    if yaml_path_value == '.' or yaml_path_value == '':
-        dataset_base = source_path.parent
-    else:
-        # Resolve it if it's an absolute path
-        dataset_base = Path(yaml_path_value)
-        if not dataset_base.is_absolute():
-            dataset_base = source_path.parent / dataset_base
+    dataset_base = source_path.parent
     
-    # Determiniamo il nome della nuova cartella
+    # Determiniamo il nome della nuova cartella (nella root del progetto)
     new_dir_name = dataset_base.name + "_tiled"
-    target_dir = dataset_base.parent / new_dir_name
+    target_dir = Path(new_dir_name)
     new_yaml_path = target_dir / f"{source_path.stem}_tiled.yaml"
     
     if target_dir.exists() and new_yaml_path.exists():
@@ -55,6 +48,9 @@ def build_tiled_dataset(source_yaml: str, overlap_ratio: float = 0.1) -> str:
             
         images = list(src_img_dir.glob("*.jpg")) + list(src_img_dir.glob("*.png"))
         total_imgs = len(images)
+        if total_imgs == 0:
+            raise FileNotFoundError(f"Nessuna immagine trovata in {src_img_dir}. Assicurati che i path in {source_yaml} siano corretti.")
+        
         log(f"Processando {total_imgs} immagini per lo split '{split}'...", "cyan")
         
         for idx, img_path in enumerate(images):
