@@ -220,6 +220,7 @@ def train_model(model: yolo_model, epochs: int, btch_size:int, img_size:int, pat
         name=name if name else model_name,
         project=trained_models_dir,
         patience=patience,
+        workers=8,
         save=True,
         save_period=1
     )    
