@@ -18,11 +18,12 @@ class yolo_model(StrEnum):
     """
     Enum dei modelli YOLO disponibili per il training.
     """
-    NANO = "yolov8n.pt"
-    SMALL = "yolov8s.pt"
-    MEDIUM = "yolov8m.pt"
-    YOLO11N = "yolo11n.pt"
-    YOLO11S = "yolo11s.pt"
+    V8_NANO = "yolov8n.pt"
+    V8_SMALL = "yolov8s.pt"
+    V8_MEDIUM = "yolov8m.pt"
+    V11_NANO = "yolo11n.pt"
+    V11_SMALL = "yolo11s.pt"
+    V11_MEDIUM = "yolo11m.pt"
 
 def is_GPUs_available() -> str:
     """

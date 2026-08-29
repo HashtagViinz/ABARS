@@ -25,4 +25,4 @@ export PYTHONUNBUFFERED=1         # Stampa i log in tempo reale senza buffering
 #
 # Il sistema genererà le cartelle invisibilmente e passerà lo YAML a YOLO.
 
-uv run main.py train --model small --epochs 200 --patience 20 --name tuned_tiled --tile
+uv run main.py train --model v8_small --epochs 200 --patience 20 --name tuned_tiled --tile

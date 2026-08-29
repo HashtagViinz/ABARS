@@ -12,4 +12,4 @@ export NCCL_IB_DISABLE=1          # Disabilita InfiniBand forzando i socket stan
 export OMP_NUM_THREADS=1          # Evita conflitti di CPU nei worker
 export PYTHONUNBUFFERED=1         # Stampa i log in tempo reale senza buffering
 
-uv run main.py train --model small --epochs 80 --patience 10 --name baseline
+uv run main.py train --model v8_small --epochs 80 --patience 10 --name baseline

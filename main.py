@@ -29,7 +29,7 @@ def arg_analyzer() -> None:
         type=lambda s: yolo_model[s.upper()],   # Parse the model argument to the corresponding yolo_model enum
         required=True,
         choices=list(yolo_model),
-        help="Syze of the Model ('NANO', 'SMALL', 'MEDIUM')",
+        help="Modello YOLO da usare (es. v8_nano, v8_small, v11_small, ecc.)",
     )
 
     # 4) Command to train the YOLO model
@@ -39,7 +39,7 @@ def arg_analyzer() -> None:
         type=lambda s: yolo_model[s.upper()],   # Parse the model argument to the corresponding yolo_model enum
         required=True,
         choices=list(yolo_model),
-        help="Syze of the Model ('NANO', 'SMALL', 'MEDIUM')",
+        help="Modello YOLO da usare (es. v8_nano, v8_small, v11_small, ecc.)",
     )
     train_command.add_argument(
         "--epochs",

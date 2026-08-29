@@ -19,4 +19,4 @@ echo "=== nvidia-smi ===="
 nvidia-smi
 echo "================="
 
-uv run main.py tune --model small
+uv run main.py tune --model v8_small
