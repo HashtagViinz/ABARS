@@ -9,3 +9,5 @@ dataset_*/
 logs/
 mlruns/
 mlflow.db
+next_step.md
+runs.csv

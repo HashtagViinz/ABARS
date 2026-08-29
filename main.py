@@ -77,15 +77,25 @@ def arg_analyzer() -> None:
         default=["none"],
         help="Lista di filtri da applicare (es. --filter clahe grayscale)."
     )
+    train_command.add_argument(
+        "--tile",
+        action="store_true",
+        help="Applica lo slicing offline 2x2 (Offline Tiling) al dataset prima del training."
+    )
 
     # 4.5) Command to generate static filtered dataset
-    generate_command = subparsers.add_parser("generate_dataset", help="Genera una copia fisica del dataset applicando un filtro CV.")
+    generate_command = subparsers.add_parser("generate_dataset", help="Genera una copia fisica del dataset applicando un filtro CV o tiling.")
     generate_command.add_argument(
         "--filter",
         nargs="+",
         type=str,
-        required=True,
+        default=["none"],
         help="Lista di filtri da applicare (es. --filter clahe grayscale)."
+    )
+    generate_command.add_argument(
+        "--tile",
+        action="store_true",
+        help="Applica lo slicing offline 2x2 (Offline Tiling) al dataset."
     )
 
     # 5) Command to test MLflow
@@ -145,15 +155,21 @@ def arg_analyzer() -> None:
             cfg_path_to_use = None
 
         # Se c'è un filtro, generiamo il dataset invisibilmente e aggiorniamo lo yaml!
+        dataset_path = args.dataset
         if "none" not in args.filter:
             log(f"Rilevati filtri in input: {args.filter}. Avvio il dataloader generativo...", "yellow")
             from cv.dataset_builder import build_filtered_dataset
             # args.filter ora è una lista, es. ["clahe", "grayscale"]
-            dataset_path = build_filtered_dataset(args.dataset, args.filter)
-            log(f"YOLO ricevera' il dataset generato da: {dataset_path}", "green")
+            dataset_path = build_filtered_dataset(dataset_path, args.filter)
+            log(f"YOLO ricevera' il dataset filtrato da: {dataset_path}", "green")
         else:
             log("Nessun filtro rilevato, procedo col dataset standard a colori.", "yellow")
-            dataset_path = args.dataset
+            
+        if args.tile:
+            log("Rilevata richiesta Tiling. Avvio lo slicing del dataset...", "yellow")
+            from cv.tiler import build_tiled_dataset
+            dataset_path = build_tiled_dataset(dataset_path)
+            log(f"YOLO ricevera' il dataset piastrellato da: {dataset_path}", "green")
 
         train_model(
             model=args.model,
@@ -167,8 +183,14 @@ def arg_analyzer() -> None:
         )
 
     elif args.command == "generate_dataset":
-        from cv.dataset_builder import build_filtered_dataset
-        build_filtered_dataset(YAML_PATH, args.filter)
+        dataset_path = YAML_PATH
+        if "none" not in args.filter:
+            from cv.dataset_builder import build_filtered_dataset
+            dataset_path = build_filtered_dataset(dataset_path, args.filter)
+        if args.tile:
+            from cv.tiler import build_tiled_dataset
+            dataset_path = build_tiled_dataset(dataset_path)
+        log(f"Dataset finale generato in: {dataset_path}", "green")
 
     
         
