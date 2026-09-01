@@ -136,6 +136,7 @@ def tune_hyperparameters(
         device=devices,
         project=tuning_dir,
         name=log_file,
+        workers=8,
         plots=True,
         save=True
     )

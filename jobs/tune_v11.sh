@@ -4,6 +4,7 @@
 #SBATCH --output=logs/%x.out
 #SBATCH --error=logs/%x.err
 #SBATCH --gres=gpu:quadro_rtx_6000:2
+#SBATCH --cpus-per-task=8
 
 # --- FIX PER IL DEADLOCK MULTI-GPU SU SLURM ---
 export NCCL_P2P_DISABLE=1         # Disabilita il Peer-to-Peer diretto se la risorsa condivisa dà problemi

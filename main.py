@@ -141,18 +141,29 @@ def arg_analyzer() -> None:
         found during the tuning process.
         """
         import os
+        from pathlib import Path
         model_name = args.model.value.split('.')[0]
-        dynamic_cfg_path = f"YOLO/tuning_results/tune_{model_name}_E30_Iter30/best_hyperparameters.yaml"
         
-        if not args.baseline and os.path.exists(dynamic_cfg_path):
-            log(f"[INFO] Uso gli iperparametri custom da: {dynamic_cfg_path}", "blue")
-            cfg_path_to_use = dynamic_cfg_path
-        else:
-            if args.baseline:
+        # Cerca dinamicamente l'ultima cartella di tuning per questo modello
+        tuning_base_dir = Path("YOLO/tuning_results")
+        matching_dirs = list(tuning_base_dir.glob(f"tune_{model_name}_*"))
+        
+        cfg_path_to_use = None
+        if matching_dirs:
+            # Prendi l'ultimo tuning eseguito
+            latest_tune_dir = max(matching_dirs, key=os.path.getmtime)
+            dynamic_cfg_path = latest_tune_dir / "best_hyperparameters.yaml"
+            
+            if not args.baseline and dynamic_cfg_path.exists():
+                log(f"[INFO] Uso gli iperparametri custom da: {dynamic_cfg_path}", "blue")
+                cfg_path_to_use = str(dynamic_cfg_path)
+            elif args.baseline:
                 log(f"[INFO] Modalità BASELINE forzata. Uso i default di YOLO ignorando il file di tuning.", "yellow")
             else:
-                log(f"[INFO] Nessun file di tuning trovato per {model_name}. Uso i default di YOLO.", "yellow")
-            cfg_path_to_use = None
+                log(f"[INFO] Nessun file 'best_hyperparameters.yaml' trovato in {latest_tune_dir}. Uso i default di YOLO.", "yellow")
+        else:
+            if not args.baseline:
+                log(f"[INFO] Nessuna cartella di tuning trovata per {model_name}. Uso i default di YOLO.", "yellow")
 
         # Se c'è un filtro, generiamo il dataset invisibilmente e aggiorniamo lo yaml!
         dataset_path = args.dataset
