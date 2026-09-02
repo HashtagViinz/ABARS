@@ -4,7 +4,8 @@ dataset/
 __pycache__/
 YOLO/trained_model/
 YOLO/tuning_results/
-YOLO/__pycache__//*.pt
+YOLO/__pycache__/
+*.pt
 dataset_*/
 logs/
 mlruns/
