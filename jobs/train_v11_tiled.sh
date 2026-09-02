@@ -19,4 +19,4 @@ export PYTHONUNBUFFERED=1         # Stampa i log in tempo reale senza buffering
 # --name v11_tuned_tiled: Nome univoco per distinguerlo nella dashboard MLflow
 # --tile: Applica lo slicing offline per migliorare la detection degli oggetti piccoli
 
-uv run main.py train --model v11_small --epochs 200 --patience 20 --name v11_tuned_tiled --tile
+uv run main.py train --model v11_small --epochs 200 --patience 20 --name v11_real_tuned_tiled --tile
