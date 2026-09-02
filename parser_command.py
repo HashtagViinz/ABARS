@@ -10,4 +10,5 @@ class command(StrEnum):
     DATASET_PREPARE = "dataset_prepare"
     TRAIN = "train"
     MLFLOW_TEST = "mlflow_test"
+    STATUS = "status"
 

@@ -100,6 +100,8 @@ def arg_analyzer() -> None:
 
     # 5) Command to test MLflow
     mlflow_test_command = subparsers.add_parser("mlflow_test", help="Test MLflow logging and connection")
+    # 6) Command to check models status
+    status_command = subparsers.add_parser("status", help="Mostra lo stato di Tuning e Training di tutti i modelli")
 
     args = parser.parse_args()
 
@@ -203,7 +205,9 @@ def arg_analyzer() -> None:
             dataset_path = build_tiled_dataset(dataset_path)
         log(f"Dataset finale generato in: {dataset_path}", "green")
 
-    
+    elif args.command == command.STATUS.value:
+        from YOLO.status import print_models_status
+        print_models_status()
         
 if __name__ == "__main__":
     arg_analyzer()
