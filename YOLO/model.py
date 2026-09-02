@@ -24,6 +24,9 @@ class yolo_model(StrEnum):
     V11_NANO = "yolo11n.pt"
     V11_SMALL = "yolo11s.pt"
     V11_MEDIUM = "yolo11m.pt"
+    V26_NANO = "yolo26n.pt"
+    V26_SMALL = "yolo26s.pt"
+    V26_MEDIUM = "yolo26m.pt"
 
 def is_GPUs_available() -> str:
     """
