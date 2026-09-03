@@ -102,6 +102,9 @@ def arg_analyzer() -> None:
     mlflow_test_command = subparsers.add_parser("mlflow_test", help="Test MLflow logging and connection")
     # 6) Command to check models status
     status_command = subparsers.add_parser("status", help="Mostra lo stato di Tuning e Training di tutti i modelli")
+    # 7) Command to analyze dataset
+    analyze_command = subparsers.add_parser("analyze_dataset", help="Analizza un dataset (background ratio e distribuzione classi)")
+    analyze_command.add_argument("--dataset", type=str, default="dataset/dataset.yaml", help="Path al file yaml del dataset (es. dataset_tiled/dataset.yaml)")
 
     args = parser.parse_args()
 
@@ -208,6 +211,9 @@ def arg_analyzer() -> None:
     elif args.command == command.STATUS.value:
         from YOLO.status import print_models_status
         print_models_status()
+    elif args.command == command.ANALYZE_DATASET.value:
+        from cv.analyzer import analyze_dataset_stats
+        analyze_dataset_stats(args.dataset)
         
 if __name__ == "__main__":
     arg_analyzer()
