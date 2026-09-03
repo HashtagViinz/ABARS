@@ -27,3 +27,14 @@ Quando lavori su questo progetto, devi rispettare rigorosamente le seguenti rego
 11. **Sviluppo Immediatamente Successivo (Offline Tiling)**:
     - La Data Augmentation per variazioni (Mosaic, Flips, etc) è già coperta nativamente da YOLO.
     - Il prossimo step fondamentale da implementare è l'**Offline Tiling (Dataset Slicing)**: creare uno script che prende le immagini ad alta risoluzione, le taglia in piastrelle più piccole (es. grid 2x2) e ricalcola i Bounding Box. Questo moltiplicherà la dimensione del dataset ed eviterà che YOLO distrugga i piccoli oggetti (es. auto, edifici piccoli) quando comprime tutto a 640/1024px.
+12. **Standard Script SLURM (Bash)**:
+    - Qualsiasi script bash generato per il cluster DEVE tassativamente includere le risorse corrette (`#SBATCH --cpus-per-task=8`, `#SBATCH --gres=gpu:quadro_rtx_6000:2`).
+    - DEVE esportare sempre l'intero blocco di sicurezza per l'ambiente e il multi-GPU:
+      ```bash
+      export MLFLOW_TRACKING_URI="sqlite:////home/vsalvatore/ABARS/mlflow.db" 
+      export NCCL_P2P_DISABLE=1         # Disabilita il Peer-to-Peer diretto se la risorsa condivisa dà problemi
+      export NCCL_IB_DISABLE=1          # Disabilita InfiniBand forzando i socket standard TCP
+      export OMP_NUM_THREADS=1          # Evita conflitti di CPU nei worker
+      export PYTHONUNBUFFERED=1         # Stampa i log in tempo reale senza buffering
+      ```
+    - Ove applicabile (nei training), deve includere le istruzioni commentate per l'uso dei filtri (es. `--filter clahe`).
