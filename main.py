@@ -82,6 +82,12 @@ def arg_analyzer() -> None:
         action="store_true",
         help="Applica lo slicing offline 2x2 (Offline Tiling) al dataset prima del training."
     )
+    train_command.add_argument(
+        "--batch",
+        type=int,
+        default=-1,
+        help="Batch size per il training. Usa -1 per l'Autobatch (default)."
+    )
 
     # 4.5) Command to generate static filtered dataset
     generate_command = subparsers.add_parser("generate_dataset", help="Genera una copia fisica del dataset applicando un filtro CV o tiling.")
@@ -190,7 +196,7 @@ def arg_analyzer() -> None:
         train_model(
             model=args.model,
             epochs=args.epochs,
-            btch_size=32,
+            btch_size=args.batch,
             img_size=1024,
             patience=args.patience,
             yaml_path=dataset_path,
