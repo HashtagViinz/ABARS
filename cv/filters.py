@@ -38,7 +38,7 @@ class GrayscaleFilter(BaseFilter):
         return cv2.cvtColor(gray, cv2.COLOR_GRAY2BGR)
 
 class BilateralFilter(BaseFilter):
-    def __init__(self, d=9, sigmaColor=75, sigmaSpace=75):
+    def __init__(self, d=25, sigmaColor=150, sigmaSpace=150):
         self.d = d
         self.sigmaColor = sigmaColor
         self.sigmaSpace = sigmaSpace
