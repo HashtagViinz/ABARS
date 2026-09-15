@@ -17,6 +17,9 @@ def build_filtered_dataset(source_yaml: str, filters_list: list[str]):
             filters.append(CLAHEFilter())
         elif filter_name == "grayscale":
             filters.append(GrayscaleFilter())
+        elif filter_name == "structural":
+            from cv.filters import StructuralEdgeFilter
+            filters.append(StructuralEdgeFilter())
         else:
             log(f"Filtro {filter_name} non supportato, ignorato.", "red")
             
