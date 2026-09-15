@@ -227,8 +227,7 @@ def train_model(model: yolo_model, epochs: int, btch_size:int, img_size:int, pat
         patience=patience,
         workers=8,
         save=True,
-        save_period=1,
-        fl_gamma=1.5
+        save_period=1
     )    
     
     log(f"Training Done. Result in : {trained_models_dir}", "green")
