@@ -85,8 +85,8 @@ def arg_analyzer() -> None:
     train_command.add_argument(
         "--batch",
         type=int,
-        default=-1,
-        help="Batch size per il training. Usa -1 per l'Autobatch (default)."
+        default=16,
+        help="Batch size per il training. Usa 16 di default per stabilità multi-GPU."
     )
 
     # 4.5) Command to generate static filtered dataset
