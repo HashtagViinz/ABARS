@@ -37,6 +37,16 @@ class GrayscaleFilter(BaseFilter):
         gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
         return cv2.cvtColor(gray, cv2.COLOR_GRAY2BGR)
 
+class BilateralFilter(BaseFilter):
+    def __init__(self, d=9, sigmaColor=75, sigmaSpace=75):
+        self.d = d
+        self.sigmaColor = sigmaColor
+        self.sigmaSpace = sigmaSpace
+
+    def apply(self, image: np.ndarray) -> np.ndarray:
+        # Applica il filtro bilaterale direttamente sull'immagine BGR a colori
+        return cv2.bilateralFilter(image, self.d, self.sigmaColor, self.sigmaSpace)
+
 class StructuralEdgeFilter(BaseFilter):
     def __init__(self, clahe_clip=4.0, clahe_grid=(8, 8), 
                  bilateral_d=9, bilateral_sigmaColor=75, bilateral_sigmaSpace=75,

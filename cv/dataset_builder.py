@@ -20,6 +20,9 @@ def build_filtered_dataset(source_yaml: str, filters_list: list[str]):
         elif filter_name == "structural":
             from cv.filters import StructuralEdgeFilter
             filters.append(StructuralEdgeFilter())
+        elif filter_name == "bilateral":
+            from cv.filters import BilateralFilter
+            filters.append(BilateralFilter())
         else:
             log(f"Filtro {filter_name} non supportato, ignorato.", "red")
             

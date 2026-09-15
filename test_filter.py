@@ -29,6 +29,9 @@ def main():
         filters.append(GrayscaleFilter())
     elif filter_name == "structural":
         filters.append(StructuralEdgeFilter())
+    elif filter_name == "bilateral":
+        from cv.filters import BilateralFilter
+        filters.append(BilateralFilter())
     else:
         log(f"Filtro {filter_name} non riconosciuto.", "red")
         sys.exit(1)
