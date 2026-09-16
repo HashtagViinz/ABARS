@@ -23,6 +23,9 @@ def build_filtered_dataset(source_yaml: str, filters_list: list[str]):
         elif filter_name == "bilateral":
             from cv.filters import BilateralFilter
             filters.append(BilateralFilter())
+        elif filter_name == "bilateral_sharp":
+            from cv.filters import BilateralSharpenFilter
+            filters.append(BilateralSharpenFilter())
         else:
             log(f"Filtro {filter_name} non supportato, ignorato.", "red")
             

@@ -47,6 +47,21 @@ class BilateralFilter(BaseFilter):
         # Applica il filtro bilaterale direttamente sull'immagine BGR a colori
         return cv2.bilateralFilter(image, self.d, self.sigmaColor, self.sigmaSpace)
 
+class BilateralSharpenFilter(BaseFilter):
+    def __init__(self, d=11, sigmaColor=85, sigmaSpace=85, sharpen_alpha=1.5, sharpen_beta=-0.5):
+        self.d = d
+        self.sigmaColor = sigmaColor
+        self.sigmaSpace = sigmaSpace
+        self.alpha = sharpen_alpha
+        self.beta = sharpen_beta
+
+    def apply(self, image: np.ndarray) -> np.ndarray:
+        # 1. Bilaterale
+        blurred = cv2.bilateralFilter(image, self.d, self.sigmaColor, self.sigmaSpace)
+        # 2. Unsharp Mask per contrastare i bordi
+        gaussian = cv2.GaussianBlur(blurred, (9, 9), 10.0)
+        return cv2.addWeighted(blurred, self.alpha, gaussian, self.beta, 0)
+
 class StructuralEdgeFilter(BaseFilter):
     def __init__(self, clahe_clip=4.0, clahe_grid=(8, 8), 
                  bilateral_d=9, bilateral_sigmaColor=75, bilateral_sigmaSpace=75,

@@ -32,6 +32,9 @@ def main():
     elif filter_name == "bilateral":
         from cv.filters import BilateralFilter
         filters.append(BilateralFilter())
+    elif filter_name == "bilateral_sharp":
+        from cv.filters import BilateralSharpenFilter
+        filters.append(BilateralSharpenFilter())
     else:
         log(f"Filtro {filter_name} non riconosciuto.", "red")
         sys.exit(1)
