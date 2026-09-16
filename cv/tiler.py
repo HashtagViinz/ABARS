@@ -156,6 +156,27 @@ def build_tiled_dataset(source_yaml: str, overlap_ratio: float = 0.1) -> str:
             if (idx + 1) % 100 == 0 or (idx + 1) == total_imgs:
                 log(f"[{split}] Progresso: {idx + 1}/{total_imgs} immagini affettate", "blue")
                 
+    # --- STEP 2: Ricalcolo delle frequenze finali (Post-Oversampling) ---
+    new_class_counts = {}
+    new_train_lbl_dir = target_dir / "labels" / "train"
+    if new_train_lbl_dir.exists():
+        for lbl_file in new_train_lbl_dir.glob("*.txt"):
+            with open(lbl_file, "r") as f:
+                for line in f:
+                    parts = line.strip().split()
+                    if parts:
+                        cls_id = int(parts[0])
+                        new_class_counts[cls_id] = new_class_counts.get(cls_id, 0) + 1
+                        
+    if new_class_counts:
+        total_new = sum(new_class_counts.values())
+        log(f"--- DISTRIBUZIONE CLASSI FINALE (TRAIN) ---", "green")
+        for cls_id, count in sorted(new_class_counts.items()):
+            pct = (count / total_new) * 100
+            log(f"Classe {cls_id}: {count} istanze ({pct:.2f}%)", "green")
+        log(f"-------------------------------------------", "green")
+    # --------------------------------------------------------------------
+
     data_yaml['path'] = str(target_dir.absolute())
     with open(new_yaml_path, "w") as f:
         yaml.dump(data_yaml, f, sort_keys=False)
