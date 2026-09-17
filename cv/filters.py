@@ -110,3 +110,61 @@ class CVPipeline:
         for f in self.filters:
             result = f.apply(result)
         return result
+
+class GammaFilter(BaseFilter):
+    def __init__(self, gamma=1.5):
+        self.gamma = gamma
+        invGamma = 1.0 / gamma
+        self.table = np.array([((i / 255.0) ** invGamma) * 255
+                               for i in np.arange(0, 256)]).astype("uint8")
+
+    def apply(self, image: np.ndarray) -> np.ndarray:
+        return cv2.LUT(image, self.table)
+
+class HSVSaturationFilter(BaseFilter):
+    def __init__(self, boost_factor=1.5):
+        self.boost_factor = boost_factor
+
+    def apply(self, image: np.ndarray) -> np.ndarray:
+        hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV).astype(np.float32)
+        hsv[:, :, 1] = hsv[:, :, 1] * self.boost_factor
+        hsv[:, :, 1] = np.clip(hsv[:, :, 1], 0, 255)
+        return cv2.cvtColor(hsv.astype(np.uint8), cv2.COLOR_HSV2BGR)
+
+class DehazeFilter(BaseFilter):
+    def __init__(self, omega=0.95, t0=0.1, radius=7):
+        self.omega = omega
+        self.t0 = t0
+        self.radius = radius
+
+    def apply(self, image: np.ndarray) -> np.ndarray:
+        I = image.astype('float64') / 255.0
+        # Calcolo Dark Channel
+        dark_c = np.min(I, axis=2)
+        kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (self.radius, self.radius))
+        dark = cv2.erode(dark_c, kernel)
+        
+        # Stima luce atmosferica (A)
+        num_pixels = dark.size
+        num_brightest = int(max(num_pixels / 1000, 1))
+        indices = np.argsort(dark.ravel())[-num_brightest:]
+        A = np.zeros(3)
+        for i in range(3):
+            A[i] = np.max(I[:, :, i].ravel()[indices])
+            # Preveniamo la divisione per zero
+            if A[i] == 0:
+                A[i] = 0.001
+            
+        # Stima mappa di trasmissione
+        norm_I = np.zeros_like(I)
+        for i in range(3):
+            norm_I[:, :, i] = I[:, :, i] / A[i]
+        transmission = 1 - self.omega * cv2.erode(np.min(norm_I, axis=2), kernel)
+        transmission = np.clip(transmission, self.t0, 1.0)
+        
+        # Ripristino immagine (Inversione modello atmosferico)
+        J = np.zeros_like(I)
+        for i in range(3):
+            J[:, :, i] = (I[:, :, i] - A[i]) / transmission + A[i]
+            
+        return np.clip(J * 255.0, 0, 255).astype('uint8')

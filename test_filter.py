@@ -35,6 +35,15 @@ def main():
     elif filter_name == "bilateral_sharp":
         from cv.filters import BilateralSharpenFilter
         filters.append(BilateralSharpenFilter())
+    elif filter_name == "gamma":
+        from cv.filters import GammaFilter
+        filters.append(GammaFilter())
+    elif filter_name == "hsv_boost":
+        from cv.filters import HSVSaturationFilter
+        filters.append(HSVSaturationFilter())
+    elif filter_name == "dehaze":
+        from cv.filters import DehazeFilter
+        filters.append(DehazeFilter())
     else:
         log(f"Filtro {filter_name} non riconosciuto.", "red")
         sys.exit(1)
