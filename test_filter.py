@@ -12,7 +12,7 @@ def main():
         sys.exit(1)
 
     img_path = sys.argv[1]
-    filter_name = sys.argv[2]
+    filter_names = sys.argv[2:]
     
     if not Path(img_path).exists():
         log(f"Immagine non trovata: {img_path}", "red")
@@ -23,35 +23,37 @@ def main():
     
     # 2. Prepara il Filtro
     filters = []
-    if filter_name == "clahe":
-        filters.append(CLAHEFilter())
-    elif filter_name == "grayscale":
-        filters.append(GrayscaleFilter())
-    elif filter_name == "structural":
-        filters.append(StructuralEdgeFilter())
-    elif filter_name == "bilateral":
-        from cv.filters import BilateralFilter
-        filters.append(BilateralFilter())
-    elif filter_name == "bilateral_sharp":
-        from cv.filters import BilateralSharpenFilter
-        filters.append(BilateralSharpenFilter())
-    elif filter_name == "gamma":
-        from cv.filters import GammaFilter
-        filters.append(GammaFilter())
-    elif filter_name == "hsv_boost":
-        from cv.filters import HSVSaturationFilter
-        filters.append(HSVSaturationFilter())
-    elif filter_name == "dehaze":
-        from cv.filters import DehazeFilter
-        filters.append(DehazeFilter())
-    else:
-        log(f"Filtro {filter_name} non riconosciuto.", "red")
-        sys.exit(1)
+    for filter_name in filter_names:
+        if filter_name == "clahe":
+            filters.append(CLAHEFilter())
+        elif filter_name == "grayscale":
+            filters.append(GrayscaleFilter())
+        elif filter_name == "structural":
+            filters.append(StructuralEdgeFilter())
+        elif filter_name == "bilateral":
+            from cv.filters import BilateralFilter
+            filters.append(BilateralFilter())
+        elif filter_name == "bilateral_sharp":
+            from cv.filters import BilateralSharpenFilter
+            filters.append(BilateralSharpenFilter())
+        elif filter_name == "gamma":
+            from cv.filters import GammaFilter
+            filters.append(GammaFilter())
+        elif filter_name == "hsv_boost":
+            from cv.filters import HSVSaturationFilter
+            filters.append(HSVSaturationFilter())
+        elif filter_name == "dehaze":
+            from cv.filters import DehazeFilter
+            filters.append(DehazeFilter())
+        else:
+            log(f"Filtro {filter_name} non riconosciuto.", "red")
+            sys.exit(1)
         
     pipeline = CVPipeline(filters)
     
     # 3. Applica il Filtro
-    log(f"Applicando il filtro '{filter_name}' a {img_path}...", "cyan")
+    combo_name = "+".join(filter_names)
+    log(f"Applicando la pipeline '{combo_name}' a {img_path}...", "cyan")
     processed_img = pipeline.process(img)
     
     # 4. Affianca le immagini (Prima e Dopo)
