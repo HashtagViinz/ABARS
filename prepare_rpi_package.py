@@ -18,6 +18,12 @@ def main():
     else:
         print("❌ Cartella ncnn_models_ready non trovata. Sicuro di averli estratti?")
         
+    # 1b. Copia la cartella cv/ con i filtri
+    src_cv = Path("cv")
+    if src_cv.exists():
+        shutil.copytree(src_cv, deploy_dir / "cv")
+        print(f"✅ Filtri CV copiati in {deploy_dir}/cv")
+        
     # 2. Prepara 100 immagini di test
     src_images = Path("dataset/images/test")
     target_images = deploy_dir / "test_images"
@@ -37,8 +43,12 @@ def main():
 import time
 import argparse
 import csv
+import cv2
+import shutil
 from pathlib import Path
 from ultralytics import YOLO
+
+from cv.filters import BilateralFilter, BilateralSharpenFilter, DehazeFilter, CVPipeline
 
 CLUSTER_METRICS = {
     "v26s_untuned_tiled_bilateral_d11_ncnn": {"Precision": 0.7675, "Recall": 0.5565, "mAP50": 0.5788, "F1": 0.645},
@@ -50,6 +60,18 @@ CLUSTER_METRICS = {
     "v26n_untuned_tiled-2_ncnn": {"Precision": 0.7005, "Recall": 0.5560, "mAP50": 0.5766, "F1": 0.619}
 }
 
+def get_pipeline_for_model(model_name):
+    filters = []
+    if "dehaze" in model_name:
+        filters.append(DehazeFilter())
+    if "bilateral_d11_sharp" in model_name:
+        filters.append(BilateralSharpenFilter(d=11, sigmaColor=85, sigmaSpace=85))
+    elif "bilateral_d11" in model_name:
+        filters.append(BilateralFilter(d=11, sigmaColor=85, sigmaSpace=85))
+    elif "bilateral_sharp" in model_name:
+        filters.append(BilateralSharpenFilter(d=11, sigmaColor=85, sigmaSpace=85))
+    return CVPipeline(filters)
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--models', default='models', help='Path to models dir')
@@ -60,26 +82,41 @@ def main():
     source_path = Path(args.source)
     output_base = Path("benchmark_results")
     
-    # Check if source is image dir or video
     is_video = source_path.is_file() and source_path.suffix in ['.mp4', '.avi']
     if not is_video:
         images = list(source_path.glob('*.jpg'))
         print(f"Trovate {len(images)} immagini di test.")
-    else:
-        print(f"Test su video {source_path.name}")
         
     csv_file = open('benchmark_metrics.csv', 'w', newline='')
     csv_writer = csv.writer(csv_file)
-    csv_writer.writerow(['Model', 'Precision', 'Recall', 'mAP50', 'F1_Score', 'Latency_ms', 'FPS'])
+    csv_writer.writerow(['Model', 'Precision', 'Recall', 'mAP50', 'F1_Score', 'CV_Preprocess_ms', 'NCNN_Inference_ms', 'Total_Latency_ms', 'FPS'])
         
-    # Per ogni modello NCNN
     for model_dir in models_dir.iterdir():
         if not model_dir.is_dir(): continue
         
         m_name = model_dir.name
         print(f"\\n{'='*50}\\nAvvio test per: {m_name}")
-        output_dir = output_base / m_name
-        os.makedirs(output_dir, exist_ok=True)
+        
+        # Identifica se _model suffix e pulisce per logica CV
+        clean_name = m_name.replace('_model', '')
+        pipeline = get_pipeline_for_model(clean_name)
+        
+        # Preprocessing OpenCV su disco (per non sfalsare Ultralytics e salvare i nomi corretti)
+        temp_dir = Path("temp_filtered")
+        if temp_dir.exists():
+            shutil.rmtree(temp_dir)
+        os.makedirs(temp_dir, exist_ok=True)
+        
+        cv_time_total = 0
+        for img_path in images:
+            img = cv2.imread(str(img_path))
+            t0 = time.time()
+            if pipeline.filters:
+                img = pipeline.process(img)
+            cv_time_total += (time.time() - t0)
+            cv2.imwrite(str(temp_dir / img_path.name), img)
+            
+        avg_cv_ms = (cv_time_total / len(images)) * 1000 if images else 0
         
         try:
             model = YOLO(str(model_dir), task='detect')
@@ -87,10 +124,8 @@ def main():
             print(f"Errore caricamento {m_name}: {e}")
             continue
             
-        start_time = time.time()
-        
         results = model.predict(
-            source=str(source_path), 
+            source=str(temp_dir), 
             save=True, 
             project=str(output_base), 
             name=m_name, 
@@ -98,47 +133,45 @@ def main():
             verbose=False
         )
         
-        end_time = time.time()
-        total_time = end_time - start_time
-        
-        # Calcolo Latenza media
         if hasattr(results[0], 'speed'):
             avg_inference_ms = sum([r.speed['inference'] for r in results]) / len(results)
-            fps = 1000/avg_inference_ms
+            total_latency_ms = avg_cv_ms + avg_inference_ms
+            fps = 1000 / total_latency_ms
             
             print(f"\\n--- RISULTATI {m_name} ---")
-            print(f"Tempo Totale Esecuzione: {total_time:.2f} s")
-            print(f"Latenza Media Rete (Inferenza Pura): {avg_inference_ms:.2f} ms")
-            print(f"FPS Stimati (Puri): {fps:.2f} fps")
+            print(f"Latenza OpenCV (Filtri): {avg_cv_ms:.2f} ms")
+            print(f"Latenza Rete (NCNN): {avg_inference_ms:.2f} ms")
+            print(f"Latenza Totale (Reale): {total_latency_ms:.2f} ms")
+            print(f"FPS Reali Combinati: {fps:.2f} fps")
             
-            # Scrittura nel CSV
-            metrics = CLUSTER_METRICS.get(m_name, {"Precision": 0, "Recall": 0, "mAP50": 0, "F1": 0})
+            metrics = CLUSTER_METRICS.get(clean_name, {"Precision": 0, "Recall": 0, "mAP50": 0, "F1": 0})
             csv_writer.writerow([
                 m_name, 
                 metrics['Precision'], 
                 metrics['Recall'], 
                 metrics['mAP50'], 
                 metrics['F1'], 
-                round(avg_inference_ms, 2), 
+                round(avg_cv_ms, 2),
+                round(avg_inference_ms, 2),
+                round(total_latency_ms, 2), 
                 round(fps, 2)
             ])
             csv_file.flush()
-        else:
-            print("Tempo totale misurato:", total_time)
             
     csv_file.close()
+    if temp_dir.exists(): shutil.rmtree(temp_dir)
     print("\\n✅ Benchmark completato! Dati salvati in benchmark_metrics.csv")
             
 if __name__ == "__main__":
     main()
 """)
-    print(f"✅ Script rpi_benchmark.py generato con successo (con esportazione CSV) in {deploy_dir}")
+    print(f"✅ Script rpi_benchmark.py generato in {deploy_dir}")
 
     # 4. Genera Dockerfile per il Raspberry Pi
     dockerfile = deploy_dir / "Dockerfile"
     with open(dockerfile, "w") as f:
         f.write("""FROM python:3.11-slim
-RUN apt-get update && apt-get install -y libgl1-mesa-glx libglib2.0-0 && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y libgl1 libglib2.0-0 && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
@@ -155,8 +188,7 @@ opencv-python-headless
 ncnn
 """)
     print(f"✅ requirements.txt generato in {deploy_dir}")
-    
-    print(f"\\nTUTTO PRONTO! Ora puoi zippare la cartella con: zip -r raspberry_deployment.zip raspberry_deployment")
+    print(f"\\nTUTTO PRONTO! Ora puoi zippare la cartella.")
 
 if __name__ == "__main__":
     main()
