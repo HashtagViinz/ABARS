@@ -14,6 +14,9 @@ def main():
     src_models = Path("ncnn_models_ready")
     if src_models.exists():
         shutil.copytree(src_models, deploy_dir / "models")
+        for d in (deploy_dir / "models").iterdir():
+            if d.is_dir() and d.name.endswith("_ncnn"):
+                d.rename(d.with_name(d.name + "_model"))
         print(f"✅ Modelli copiati in {deploy_dir}/models")
     else:
         print("❌ Cartella ncnn_models_ready non trovata. Sicuro di averli estratti?")
