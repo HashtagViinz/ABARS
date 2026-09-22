@@ -14,3 +14,4 @@ next_step.md
 runs.csv
 /test_results/
 parse_runs.py
+*.zip
