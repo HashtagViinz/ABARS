@@ -28,7 +28,7 @@ def main():
         print(f"✅ Filtri CV copiati in {deploy_dir}/cv")
         
     # 2. Prepara 100 immagini di test
-    src_images = Path("dataset/images/test")
+    src_images = Path("dataset_tiled/images/test")
     target_images = deploy_dir / "test_images"
     os.makedirs(target_images, exist_ok=True)
     if src_images.exists():
