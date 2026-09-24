@@ -1,0 +1,158 @@
+% ==========================================
+% CHAPTER 1: DATASET AND DATA PREPARATION
+% ==========================================
+% NOTE FOR OVERLEAF: 
+% Assicurati di inserire i seguenti pacchetti nel tuo preambolo (main.tex):
+% \usepackage{amsmath}
+% \usepackage{algorithm}
+% \usepackage{algpseudocode}
+% ==========================================
+
+\chapter{Dataset and Data Preparation}
+\label{ch:dataset}
+
+\section{Introduction to UAVOD-10}
+The foundation of the experimental work conducted in this thesis relies on the \textbf{UAVOD-10} dataset (10-category Unmanned Aerial Vehicle Small Weak Object Detection Dataset), originally introduced by researchers from the China University of Geosciences. 
+The dataset was designed to address the growing potential of imaging sensors utilized in remote sensing, which capture high-resolution imagery revealing intricate details of the Earth's surface. 
+
+Unlike satellite imagery, Unmanned Aerial Vehicle (UAV) remote sensing images possess exceptionally high resolutions and shorter revisit intervals. However, they present unique challenges such as high intra-class variations, complex background contexts, and sensor noise. These factors make the detection of small-scale and "weak-feature-response" geospatial targets a highly challenging task.
+
+\section{Dataset Analysis and Class Imbalance}
+The UAVOD-10 dataset consists of high-resolution images categorized into 10 distinct classes of urban and natural elements. During our initial exploratory data analysis, a severe class imbalance was identified, as detailed in Table \ref{tab:uavod10_stats}. 
+As typically observed in urban remote sensing, certain classes (e.g., \textit{Building} or \textit{Prefabricated house}) heavily dominate the dataset in terms of raw instance count, whereas minority classes (such as \textit{Pool} or \textit{Landslide}) are significantly underrepresented.
+
+\begin{table}[hbt!]
+\centering
+\caption{Distribution of classes and bounding box widths in the UAVOD-10 dataset.}
+\label{tab:uavod10_stats}
+\begin{tabular}{lrrrrr}
+\toprule
+\multirow{2}{*}{\textbf{Category}} & \multirow{2}{*}{\textbf{Number}} & \multicolumn{4}{c}{\textbf{Object Width (pixels)}} \\
+\cmidrule(lr){3-6}
+ & & \textbf{Max} & \textbf{Min} & \textbf{Mean} & \textbf{Std} \\
+\midrule
+Building & 12,990 & 312 & 9 & 74.85 & 28.10 \\
+Prefabricated house & 2,060 & 876 & 12 & 47.77 & 35.11 \\
+Ship & 1,019 & 105 & 8 & 34.18 & 14.48 \\
+Well & 648 & 115 & 9 & 33.51 & 11.78 \\
+Cable tower & 587 & 245 & 5 & 53.23 & 44.64 \\
+Vehicle & 506 & 133 & 10 & 24.71 & 12.10 \\
+Cultivation mesh cage & 258 & 498 & 22 & 176.61 & 95.11 \\
+Quarry & 83 & 1,204 & 73 & 406.72 & 259.89 \\
+Pool & 43 & 1,946 & 20 & 211.76 & 269.89 \\
+Landslide & 40 & 2,044 & 57 & 526.24 & 461.70 \\
+\midrule
+\textbf{All instances} & \textbf{18,234} & \textbf{2,044} & \textbf{5} & \textbf{70.26} & \textbf{57.66} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+To better interpret the dataset characteristics, the columns in Table \ref{tab:uavod10_stats} represent the following metrics:
+\begin{itemize}
+    \item \textbf{Category}: The specific class label of the target object.
+    \item \textbf{Number}: The total raw count of ground-truth bounding box instances present across all images for that category.
+    \item \textbf{Object Width (pixels)}: A statistical breakdown of the bounding box widths, which serves as a proxy for the object's physical footprint and scale variance within the image.
+    \begin{itemize}
+        \item \textbf{Max / Min}: The maximum and minimum width observed. Extremely low minimum values (e.g., 5 pixels for \textit{Cable tower} or 8 pixels for \textit{Ship}) emphasize the extreme "small-scale" nature of the targets.
+        \item \textbf{Mean}: The average pixel size of the object across the entire dataset.
+        \item \textbf{Std (Standard Deviation)}: Measures the intra-class scale variation. A high standard deviation (e.g., 461.70 for \textit{Landslide} or 269.89 for \textit{Pool}) indicates that the object can appear at drastically different scales, depending on the drone's flight altitude or the object's natural extent.
+    \end{itemize}
+\end{itemize}
+
+If a deep learning object detector, such as YOLO, is trained directly on this unbalanced distribution, the model tends to overfit to the majority classes while completely ignoring the minority ones. This phenomenon leads to superficially high overall accuracy metrics but catastrophic recall scores for rare, yet critical, targets.
+
+\section{Proposed Data Preparation Pipeline}
+To mitigate the issues of extreme class imbalance and the degradation of small objects during the neural network's downsampling phases, we designed and implemented a custom data preparation pipeline consisting of two main stages: \textbf{Offline Tiling} and \textbf{Targeted Oversampling}.
+
+\subsection{Offline Tiling for Small Object Preservation}
+State-of-the-art detectors like YOLO natively resize input images to a fixed square resolution (e.g., $640 \times 640$ or $1024 \times 1024$ pixels) to match the neural network's tensor dimensions. When feeding a native 4K UAV image into the network, this aggressive downscaling compresses small objects (such as distant vehicles) into unidentifiable clusters of a few pixels, effectively destroying their morphological features.
+
+To preserve the fidelity of small objects, an \textit{Offline Tiling} strategy was applied exclusively to the training set. Each original high-resolution image was sliced into a $2 \times 2$ grid (4 tiles). To ensure that objects located on the cutting edges were not truncated, a spatial overlap ratio ($O_r$) of 10\% was introduced. 
+
+Let the original image dimensions be $W$ (width) and $H$ (height). The overlap offsets in pixels are defined as:
+\begin{equation}
+    \Delta x = \lfloor W \times O_r \rfloor, \quad \Delta y = \lfloor H \times O_r \rfloor
+\end{equation}
+The spatial bounding coordinates for the four overlapping tiles ($T_0, T_1, T_2, T_3$) are extracted as follows:
+\begin{align}
+    T_0 &= \left[0, 0, \frac{W}{2} + \Delta x, \frac{H}{2} + \Delta y\right] \\
+    T_1 &= \left[\frac{W}{2} - \Delta x, 0, W, \frac{H}{2} + \Delta y\right] \\
+    T_2 &= \left[0, \frac{H}{2} - \Delta y, \frac{W}{2} + \Delta x, H\right] \\
+    T_3 &= \left[\frac{W}{2} - \Delta x, \frac{H}{2} - \Delta y, W, H\right]
+\end{align}
+
+During this process, the absolute coordinates of the ground-truth bounding boxes were mathematically remapped to the relative coordinate space of each cropped tile, dynamically discarding any box that fell outside the intersection area.
+
+\subsection{Targeted Oversampling of Minority Classes}
+Following the tiling process, we addressed the class imbalance by calculating the frequency of each class exclusively within the training split. Let $C$ be the set of all classes and $\text{count}(c)$ be the total number of instances for a given class $c \in C$. We define the maximum frequency $N_{max} = \max_{c \in C} \text{count}(c)$.
+
+For each generated tile, we analyzed the unique classes present within it. If a tile contained at least one instance of a minority class, the entire tile (along with its annotation file) was duplicated multiple times on the storage disk. The duplication multiplier $M_c$ for a class $c$ is computed as the ratio between the majority class count and the target class count, clamped to a predefined maximum threshold ($M_{limit} = 5$) to prevent storage overflow.
+
+The algorithmic implementation of this combined strategy is detailed in Algorithm \ref{alg:oversampling}.
+
+\begin{algorithm}[h]
+\caption{Offline Tiling and Targeted Oversampling Pipeline}
+\label{alg:oversampling}
+\begin{algorithmic}[1]
+\Require Set of Training Images $I_{train}$, Bounding Boxes $B$, Overlap Ratio $O_r$
+\State Compute $\text{count}(c)$ for all $c \in C$ \Comment{Count occurrences of each class in the dataset}
+\State $N_{max} \gets \max(\text{count}(c))$ \Comment{Identify the majority class count (e.g., Buildings)}
+\For{each class $c \in C$}
+    \State $M_c \gets \min\left( \max\left(1, \lfloor \frac{N_{max}}{\text{count}(c)} \rfloor \right), 5 \right)$ \Comment{Calculate multiplier, capped at 5x to prevent storage explosion}
+\EndFor
+\For{each image $img \in I_{train}$}
+    \State $Tiles \gets \text{Generate4Tiles}(img, O_r)$ \Comment{Slice the 4K image into 4 overlapping quadrants}
+    \For{each $tile \in Tiles$}
+        \State $B_{tile} \gets \text{RemapCoordinates}(B, tile)$ \Comment{Translate absolute box coordinates to local tile coordinates}
+        \State $Classes_{tile} \gets \text{ExtractUniqueClasses}(B_{tile})$ \Comment{Identify which classes are actually present in this specific tile}
+        \State $copies \gets 1$ \Comment{Default behavior: save the tile once}
+        \If{$Classes_{tile} \neq \emptyset$}
+            \State $copies \gets \max_{c \in Classes_{tile}} M_c$ \Comment{If a rare class is present, adopt its high multiplier (e.g., 5x)}
+        \EndIf
+        \For{$i = 1$ to $copies$}
+            \State Save $tile$ to disk as $img\_t_{idx}\_c_{i}.jpg$ \Comment{Physically clone the image tile on disk}
+            \State Save $B_{tile}$ to disk \Comment{Clone the corresponding annotation file}
+        \EndFor
+    \EndFor
+\EndFor
+\end{algorithmic}
+\end{algorithm}
+
+\subsubsection*{Algorithm Walkthrough}
+To better illustrate the logic behind Algorithm \ref{alg:oversampling}, consider a scenario where the dataset is heavily dominated by \textit{Buildings} ($12,990$ instances) and severely lacks \textit{Pools} ($43$ instances). 
+
+In lines 1-5, the algorithm identifies \textit{Buildings} as the majority class ($N_{max} = 12,990$). When calculating the multiplier for \textit{Pools}, the raw mathematical ratio would dictate cloning the pool images 302 times ($12,990 \div 43 \approx 302$). Because cloning high-resolution images hundreds of times would lead to exponential storage explosion and severe training bottlenecks, the multiplier equation (line 4) employs a \texttt{min(..., 5)} clamping function. This acts as a strict safety bound, ensuring that no tile is cloned more than 5 times. 
+
+In lines 6-18, the script iterates through each image and slices it into four overlapping quadrants. Rather than blindly copying the entire original 4K image, the algorithm intelligently inspects the bounding boxes contained within each specific tile (line 9). If a tile contains only \textit{Buildings}, the calculated \textit{copies} variable remains 1, and the tile is saved normally. However, if the tile contains a \textit{Pool}, the algorithm retrieves the previously calculated multiplier for the pool class (which was capped at 5) and updates the \textit{copies} variable (line 12). The script then physically clones that specific tile 5 times on the disk (lines 14-17).
+
+This combined approach ensures that the YOLO model encounters an artificially balanced dataset during training. Consequently, it significantly improves the network's ability to extract features for rare geospatial targets, without sacrificing the morphological clarity of small objects.
+
+\section{Dataset Visual Examples}
+To fully appreciate the complexity of the UAVOD-10 dataset and the necessity of the aforementioned preprocessing steps, it is essential to visually analyze the raw data. 
+
+Figure \ref{fig:dataset_examples} illustrates a typical scenario encountered by the drone's imaging sensor. The \textbf{Input} (left) consists of a raw, high-resolution aerial photograph. As visually evident, the wide field of view and high altitude result in objects of interest occupying merely a fraction of the total pixel area, often blending into complex natural or urban backgrounds (such as shadows, varying illumination, or dense vegetation). 
+
+The \textbf{Expected Output} (right) demonstrates the ground-truth annotations required by the neural network. The bounding boxes precisely encapsulate the instances belonging to the 10 target categories. To facilitate visual inspection, each class is color-coded with a semi-transparent overlay:
+\begin{itemize}
+    \item \textcolor[HTML]{E6194B}{\rule{1em}{1em}} \textbf{Building}
+    \item \textcolor[HTML]{911EB4}{\rule{1em}{1em}} \textbf{Cable tower}
+    \item \textcolor[HTML]{D2F53C}{\rule{1em}{1em}} \textbf{Cultivation mesh cage}
+    \item \textcolor[HTML]{F032E6}{\rule{1em}{1em}} \textbf{Landslide}
+    \item \textcolor[HTML]{46F0F0}{\rule{1em}{1em}} \textbf{Pool}
+    \item \textcolor[HTML]{0082C8}{\rule{1em}{1em}} \textbf{Prefabricated house}
+    \item \textcolor[HTML]{FABED4}{\rule{1em}{1em}} \textbf{Quarry}
+    \item \textcolor[HTML]{3CB44B}{\rule{1em}{1em}} \textbf{Ship}
+    \item \textcolor[HTML]{FFE119}{\rule{1em}{1em}} \textbf{Vehicle}
+    \item \textcolor[HTML]{F58230}{\rule{1em}{1em}} \textbf{Well}
+\end{itemize}
+
+Viewing these annotations highlights the extreme scale discrepancy: while the overall image may encompass millions of pixels (e.g., 4K resolution), individual targets such as civilian vehicles or cable towers are constrained to micro-regions often smaller than $20 \times 20$ pixels. This visual evidence further validates the absolute necessity of the \textit{Offline Tiling} strategy implemented to prevent the morphological destruction of these micro-targets during the standard downsampling phase.
+
+\begin{figure}[hbt!]
+    \centering
+    % \includegraphics[width=0.48\textwidth]{images/50_original.jpg}
+    % \hfill
+    % \includegraphics[width=0.48\textwidth]{images/50_annotated.jpg}
+    \caption{Visual comparison of a raw UAV input image (left) and the expected detection output with ground-truth bounding boxes (right). The bounding boxes emphasize the extremely small scale of the targets relative to the overall image dimensions.}
+    \label{fig:dataset_examples}
+\end{figure}

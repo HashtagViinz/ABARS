@@ -1,0 +1,53 @@
+% ==========================================
+% CHAPTER 3: MODELS, TUNING, AND EVALUATION
+% ==========================================
+
+\chapter{YOLO Architecture, Hyperparameter Tuning, and Evaluation}
+\label{ch:models}
+
+\section{Model Selection Strategy}
+To determine the optimal architecture for real-time UAV object detection, our experimental framework was designed to evaluate three distinct generations of the \textit{You Only Look Once} (YOLO) family: YOLOv8, YOLOv11, and the highly experimental YOLOv26. 
+
+\begin{itemize}
+    \item \textbf{YOLOv8}: Served as the foundational benchmark. Renowned for its stability and highly optimized C2f (Cross Stage Partial) modules, it provides a reliable baseline for comparison.
+    \item \textbf{YOLOv11}: Evaluated for its recent architectural improvements, particularly in feature extraction efficiency and gradient flow optimization, which theoretically enhance small-object recognition without significantly increasing the computational payload.
+    \item \textbf{YOLOv26}: The most aggressive and experimental iteration tested. YOLOv26 represents a paradigm shift by moving towards an NMS-free (Non-Maximum Suppression-free) architecture, relying entirely on end-to-end attention mechanisms to suppress duplicate bounding boxes. 
+\end{itemize}
+
+For each architectural generation, we constrained our experiments to the Nano (\textit{n}), Small (\textit{s}), and Medium (\textit{m}) parameter sizes. This constraint was strictly enforced to guarantee that the final resulting weights could be deployed on edge hardware, specifically the resource-constrained Raspberry Pi environment, ensuring acceptable inference latency (FPS) for real-world drone applications.
+
+\section{Hyperparameter Tuning}
+Deep learning architectures like YOLO are distributed with default hyperparameters optimized for general-purpose datasets (e.g., COCO). Given the unique nature of our UAV imagery—characterized by extreme scale variances, high-altitude perspectives, and dense clustering—it was imperative to investigate whether these default configurations were optimal for our specific domain.
+
+To address this, we executed a Hyperparameter Tuning pipeline via a Genetic Algorithm. By running the training script with the \texttt{--tune} argument on the High-Performance Computing (HPC) SLURM cluster, the algorithm mutated key parameters (such as learning rate, weight decay, and augmentation probabilities) over multiple generations, selecting the offspring that maximized the validation mAP (mean Average Precision).
+
+\subsection{The YOLOv26 Tuning Phenomenon}
+While the genetic tuning algorithm yielded measurable improvements for the YOLOv8 and YOLOv11 architectures, it encountered severe mathematical instability when applied to the YOLOv26 family. Because YOLOv26 utilizes an NMS-free, end-to-end assignment mechanism, the genetic mutations aggressively penalized the initial learning rate ($lr0$), frequently freezing it at extreme minimums (e.g., $1e-05$). This caused the network's gradient descent to stall entirely across all epochs, resulting in catastrophic failure during training. Consequently, it was formally determined that YOLOv26 models must bypass the genetic tuning phase and be trained strictly in \texttt{--baseline} (untuned) mode.
+
+\section{Top 7 Models Evaluation}
+Following the preliminary testing phase, the YOLOv26 architecture demonstrated such a profound superiority in extracting features from our high-resolution, complex dataset that the final evaluation was strictly narrowed down to this architecture. The ultimate objective was to determine the optimal synergy between the YOLOv26 backbone (in Nano, Small, and Medium sizes) and the custom Computer Vision pipelines detailed in Chapter \ref{ch:filters}.
+
+Table \ref{tab:top_models} details the quantitative metrics of the 7 final models selected for the deployment phase, ranked by \textbf{mAP@50}. All models in this final stage were trained using the untuned baseline configuration due to the aforementioned NMS-free mathematical constraints.
+
+\begin{table}[hbt!]
+    \centering
+    \caption{Top 7 Final YOLOv26 Models (combined with CV filters) ranked by Validation mAP@50.}
+    \label{tab:top_models}
+    \resizebox{\linewidth}{!}{
+    \begin{tabular}{@{}llcccc@{}}
+        \toprule
+        \textbf{Rank} & \textbf{Model Name} & \textbf{mAP@50} & \textbf{mAP@50-95} & \textbf{Precision} & \textbf{Recall} \\
+        \midrule
+        1 & \texttt{v26m\_untuned\_tiled-6}                     & 0.607 & 0.362 & 0.741 & 0.564 \\
+        2 & \texttt{v26s\_untuned\_tiled-3}                     & 0.604 & 0.350 & 0.674 & 0.615 \\
+        3 & \texttt{v26s\_untuned\_tiled\_bilateral\_d11}       & 0.579 & 0.341 & 0.768 & 0.557 \\
+        4 & \texttt{v26n\_untuned\_tiled-2}                     & 0.577 & 0.329 & 0.701 & 0.556 \\
+        5 & \texttt{v26m\_untuned\_tiled\_bilateral\_sharp}     & 0.574 & 0.343 & 0.748 & 0.562 \\
+        6 & \texttt{v26n\_untuned\_tiled\_bilateral\_d11\_sharp} & 0.565 & 0.336 & 0.765 & 0.522 \\
+        7 & \texttt{v26s\_untuned\_dehaze\_bilateral\_sharp}    & 0.545 & 0.325 & 0.762 & 0.529 \\
+        \bottomrule
+    \end{tabular}
+    }
+\end{table}
+
+The results confirm the sheer dominance of the Medium and Small architectures applied to the purely tiled dataset (without photometric alteration), capturing the top two positions. However, the introduction of the CV pipelines—specifically the Bilateral Filter variants—yielded extraordinary results in Precision. For instance, the \texttt{v26s\_untuned\_tiled\_bilateral\_d11} achieved a staggering 76.8\% Precision, heavily penalizing false positives, making it an extremely viable candidate for scenarios where false alarms are critical.

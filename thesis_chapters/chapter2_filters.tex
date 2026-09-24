@@ -1,0 +1,172 @@
+% ==========================================
+% CHAPTER 2: COMPUTER VISION ALGORITHMS
+% ==========================================
+
+\chapter{Computer Vision Enhancement Algorithms}
+\label{ch:filters}
+
+\section{Introduction to Image Preprocessing}
+One of the core challenges of detecting small and weak objects in Unmanned Aerial Vehicle (UAV) imagery is the interference caused by atmospheric phenomena (e.g., haze, shadows) and inherent sensor noise. To assist the YOLO neural network in extracting robust morphological features from these challenging environments, a comprehensive suite of Computer Vision algorithms was developed and tested.
+
+These algorithms can be broadly categorized into two phases: the implementation of individual "raw" filters, designed to target specific photometric or structural anomalies, and the aggregation of these filters into complex, sequential pipelines. This chapter details the mathematical foundations and visual impacts of the individual filters.
+
+\section{Raw Filters Analysis}
+The following sub-sections detail the 8 fundamental Computer Vision filters engineered for the preprocessing pipeline. Each filter was applied independently to the high-resolution UAV imagery. To demonstrate their efficacy, a side-by-side visual comparison between the original input image and the filtered output is provided.
+
+\subsection{Contrast Limited Adaptive Histogram Equalization (CLAHE)}
+Traditional histogram equalization operates globally, often leading to severe over-amplification of noise and artificial washout in relatively uniform areas like large bodies of water. To circumvent this, the CLAHE algorithm partitions the image into small contextual regions (e.g., $8 \times 8$ tiles) and applies equalization locally. The contrast amplification is restricted by a predefined \textit{clip limit} to prevent noise escalation. To preserve the original chromaticity, the operation is strictly performed on the Luminance (L) channel of the CIELAB color space.
+
+\begin{figure}[hbt!]
+    \centering
+    % \includegraphics[width=0.48\textwidth]{images/50_original.jpg}
+    % \hfill
+    % \includegraphics[width=0.48\textwidth]{images/50_clahe.jpg}
+    \caption{Visual comparison: Original Image (left) vs. CLAHE Filter (right). Note the localized contrast enhancement in shadowed regions.}
+    \label{fig:filter_clahe}
+\end{figure}
+
+\subsection{Grayscale Conversion}
+While deep learning models inherently rely on color variations (RGB) to distinguish certain classes, removing color channels forces the network to concentrate purely on structural and morphological features (gradients and edges). The Grayscale filter applies a standard luminosity conversion; however, the tensor is systematically duplicated across three channels to maintain architectural compatibility with the YOLO network.
+
+\begin{figure}[hbt!]
+    \centering
+    % \includegraphics[width=0.48\textwidth]{images/50_original.jpg}
+    % \hfill
+    % \includegraphics[width=0.48\textwidth]{images/50_grayscale.jpg}
+    \caption{Visual comparison: Original Image (left) vs. Grayscale Filter (right).}
+    \label{fig:filter_grayscale}
+\end{figure}
+
+\subsection{Bilateral Filter and Neighborhood Parameter Optimization}
+Unlike a standard Gaussian blur that indiscriminately smooths both noise and structural edges, the Bilateral filter employs a non-linear, edge-preserving smoothing technique. It calculates a weighted average of nearby pixels based on both spatial proximity (geometric distance) and radiometric similarity (color intensity differences). This significantly reduces high-frequency background noise while preserving the sharp contours of the targets.
+
+A critical hyperparameter in this algorithm is the pixel neighborhood diameter ($d$). To determine the optimal balance between noise reduction and structural preservation, various values of $d$ were empirically tested (specifically $d=11$, $d=15$, and $d=25$). 
+As demonstrated in Figure \ref{fig:filter_bilateral_variations}, increasing the diameter aggressively flattens the background textures but dramatically increases the computational latency. A lower diameter ($d=11$) was ultimately favored for our primary pipeline to maintain real-time or near-real-time inference speeds during drone deployment, while still providing highly effective edge-preserving noise suppression.
+
+\begin{figure}[hbt!]
+    \centering
+    % \includegraphics[width=0.48\textwidth]{images/50_original.jpg}
+    % \hfill
+    % \includegraphics[width=0.48\textwidth]{images/50_bilateral_d11.jpg}
+    
+    % \vspace{0.3cm}
+    
+    % \includegraphics[width=0.48\textwidth]{images/50_bilateral_d15.jpg}
+    % \hfill
+    % \includegraphics[width=0.48\textwidth]{images/50_bilateral_d25.jpg}
+    \caption{Impact of the neighborhood diameter $d$ on the Bilateral Filter. Top-left: Original. Top-right: $d=11$ (optimal balance). Bottom-left: $d=15$. Bottom-right: $d=25$ (aggressive smoothing but high latency).}
+    \label{fig:filter_bilateral_variations}
+\end{figure}
+
+\subsection{Bilateral Sharpening (Unsharp Masking)}
+To further enhance target visibility, the Bilateral Sharpen filter combines the noise-reduction capabilities of the Bilateral filter with an aggressive \textit{Unsharp Masking} operator. After the initial edge-preserving blur, a heavily blurred Gaussian version of the image is subtracted from the original, isolating the high-frequency edge data. This edge map is then multiplied by an amplification factor ($\alpha$) and added back, resulting in a dramatic increase in local contrast at object boundaries.
+
+\begin{figure}[hbt!]
+    \centering
+    % \includegraphics[width=0.48\textwidth]{images/50_original.jpg}
+    % \hfill
+    % \includegraphics[width=0.48\textwidth]{images/50_bilateral_sharpen.jpg}
+    \caption{Visual comparison: Original Image (left) vs. Bilateral Sharpen Filter (right).}
+    \label{fig:filter_bilateral_sharpen}
+\end{figure}
+
+\subsection{Structural Edge Extraction}
+Designed specifically for environments dominated by severe clutter, this extreme non-linear filter strips the image of its photometric data to generate a pure structural map. The algorithm applies CLAHE and Bilateral blurring to condition the luminance channel, followed by the Canny Edge Detection algorithm. Morphological closing and opening operations (using $5 \times 5$ and $3 \times 3$ structural kernels) are subsequently applied to reconnect broken structural lines and eliminate isolated "salt-and-pepper" noise artifacts.
+
+\begin{figure}[hbt!]
+    \centering
+    % \includegraphics[width=0.48\textwidth]{images/50_original.jpg}
+    % \hfill
+    % \includegraphics[width=0.48\textwidth]{images/50_structural_edge.jpg}
+    \caption{Visual comparison: Original Image (left) vs. Structural Edge Filter (right). The image is reduced to a pure morphological topology.}
+    \label{fig:filter_structural_edge}
+\end{figure}
+
+\subsection{Non-Linear Gamma Correction}
+Atmospheric scattering and underexposed sensors often result in non-linear luminance decay. The Gamma filter applies a power-law transformation (with $\gamma > 1$) mapping via a precomputed Lookup Table (LUT). This non-linear stretching rapidly brightens deep mid-tones and shadows, bringing hidden targets out of dark valleys and ravines.
+
+\begin{figure}[hbt!]
+    \centering
+    % \includegraphics[width=0.48\textwidth]{images/50_original.jpg}
+    % \hfill
+    % \includegraphics[width=0.48\textwidth]{images/50_gamma.jpg}
+    \caption{Visual comparison: Original Image (left) vs. Gamma Filter (right).}
+    \label{fig:filter_gamma}
+\end{figure}
+
+\subsection{HSV Saturation Boost}
+In environments where targets inherently camouflage with the background (e.g., green vehicles in dense vegetation), boosting chromatic contrast can significantly aid the detector. This filter translates the image into the HSV (Hue, Saturation, Value) color space and applies a scalar multiplication exclusively to the Saturation channel, synthetically increasing color vibrancy before returning the tensor to BGR format.
+
+\begin{figure}[hbt!]
+    \centering
+    % \includegraphics[width=0.48\textwidth]{images/50_original.jpg}
+    % \hfill
+    % \includegraphics[width=0.48\textwidth]{images/50_hsv_saturation.jpg}
+    \caption{Visual comparison: Original Image (left) vs. HSV Saturation Filter (right).}
+    \label{fig:filter_hsv}
+\end{figure}
+
+\subsection{Dark Channel Prior Dehazing}
+UAVs operating at high altitudes frequently suffer from atmospheric scattering, creating a milky "haze" over the imagery. The Dehaze filter implements the Dark Channel Prior (DCP) algorithm. It assumes that in haze-free outdoor images, at least one color channel contains pixels with very low intensity. By eroding the image and estimating the atmospheric light vector ($A$), the filter dynamically maps a spatial transmission matrix ($t$) to invert the atmospheric scattering model, effectively piercing through the fog.
+
+\begin{figure}[hbt!]
+    \centering
+    % \includegraphics[width=0.48\textwidth]{images/50_original.jpg}
+    % \hfill
+    % \includegraphics[width=0.48\textwidth]{images/50_dehaze.jpg}
+    \caption{Visual comparison: Original Image (left) vs. Dehaze Filter (right). Atmospheric scattering is mathematically inverted.}
+    \label{fig:filter_dehaze}
+\end{figure}
+
+
+
+\section{Sequential Filter Pipelines}
+The object-oriented architecture of the preprocessing module allowed individual filters to be dynamically chained together via a \texttt{CVPipeline} orchestrator class. While single filters address specific anomalies, concatenating them produces powerful, synergistic effects that tackle multiple domain challenges simultaneously. The following combinatorial pipelines were evaluated for the dataset preparation.
+
+\subsection{Pipeline 1: Dehaze + CLAHE}
+In extreme remote sensing scenarios, inverting the atmospheric scattering (Dehaze) often leaves the image mathematically accurate but visually flat and low in contrast, especially in dark areas previously obscured by fog. By passing the dehazed output immediately into the CLAHE algorithm, the local contrast of the newly revealed structures is aggressively equalized. This combination acts as the ultimate "visibility restorer" for high-altitude captures.
+
+\begin{figure}[hbt!]
+    \centering
+    % \includegraphics[width=0.48\textwidth]{images/102_original.jpg}
+    % \hfill
+    % \includegraphics[width=0.48\textwidth]{images/102_dehaze_clahe.jpg}
+    \caption{Sequential Pipeline 1: Original Image (left) vs. Dehaze + CLAHE (right).}
+    \label{fig:pipeline_dehaze_clahe}
+\end{figure}
+
+\subsection{Pipeline 2: Bilateral Sharpening + HSV Boost}
+This pipeline is designed to artificially isolate targets from complex backgrounds (e.g., green vehicles hidden in dense forests). The Bilateral Sharpen filter first enhances the geometric contours of the targets while suppressing background noise. Subsequently, the HSV Saturation Boost pushes the chromatic vibrancy of the image. The resulting tensor provides the neural network with hyper-sharp edges and unnaturally distinct color signatures.
+
+\begin{figure}[hbt!]
+    \centering
+    % \includegraphics[width=0.48\textwidth]{images/102_original.jpg}
+    % \hfill
+    % \includegraphics[width=0.48\textwidth]{images/102_sharp_hsv.jpg}
+    \caption{Sequential Pipeline 2: Original Image (left) vs. Bilateral Sharpen + HSV Boost (right).}
+    \label{fig:pipeline_sharp_hsv}
+\end{figure}
+
+\subsection{Pipeline 3: CLAHE + Grayscale}
+One of the risks of training a deep learning model on color-rich aerial imagery is that the network might overfit to environmental colors (e.g., associating the color green with "nothing" and grey with "building") rather than learning the actual shape of the objects. This pipeline forces the network to become "color-blind." It first equalizes the structural contrasts locally using CLAHE, and then entirely strips the chromatic data via Grayscale conversion. This forces the convolutional kernels to learn pure geometric topology.
+
+\begin{figure}[hbt!]
+    \centering
+    % \includegraphics[width=0.48\textwidth]{images/102_original.jpg}
+    % \hfill
+    % \includegraphics[width=0.48\textwidth]{images/102_clahe_gray.jpg}
+    \caption{Sequential Pipeline 3: Original Image (left) vs. CLAHE + Grayscale (right).}
+    \label{fig:pipeline_clahe_gray}
+\end{figure}
+
+\subsection{Pipeline 4: Dehaze + Bilateral Sharpening (The Optimal Baseline)}
+Considered one of the most critical combinations tested, this pipeline targets the two primary physical limitations of UAV hardware: atmospheric scattering and sensor softness. The Dehaze filter first inverts the atmospheric model to pierce through fog and high-altitude haze. The resulting tensor, now free of radiometric scattering but often lacking in edge definition, is immediately processed by the Bilateral Sharpen filter. This second stage suppresses residual high-frequency sensor noise while aggressively contrasting the structural borders via Unsharp Masking. This synergistic approach maximizes the morphological clarity of small objects without amplifying background artifacts, establishing a robust baseline for YOLO inference.
+
+\begin{figure}[hbt!]
+    \centering
+    % \includegraphics[width=0.48\textwidth]{images/102_original.jpg}
+    % \hfill
+    % \includegraphics[width=0.48\textwidth]{images/102_dehaze_sharp.jpg}
+    \caption{Sequential Pipeline 4: Original Image (left) vs. Dehaze + Bilateral Sharpening (right). The optimal combination for visibility restoration and edge enhancement.}
+    \label{fig:pipeline_dehaze_sharp}
+\end{figure}
