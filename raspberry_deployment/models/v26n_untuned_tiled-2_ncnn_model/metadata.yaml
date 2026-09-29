@@ -1,0 +1,29 @@
+description: Ultralytics YOLO26n model trained on dataset_tiled/uavod10_tiled.yaml
+author: Ultralytics
+date: '2026-09-21T13:02:00.270443'
+version: 8.4.104
+license: AGPL-3.0 License (https://ultralytics.com/license)
+docs: https://docs.ultralytics.com
+stride: 32
+task: detect
+head: Detect
+batch: 1
+imgsz:
+- 1024
+- 1024
+names:
+  0: building
+  1: cable-tower
+  2: cultivation-mesh-cage
+  3: landslide
+  4: pool
+  5: prefabricated-house
+  6: quarry
+  7: ship
+  8: vehicle
+  9: well
+args:
+  batch: 1
+  quantize: null
+channels: 3
+end2end: false
