@@ -1,8 +1,0 @@
-Model,Precision,Recall,mAP50,F1_Score,CV_Preprocess_ms_SAHI,NCNN_Inference_ms_SAHI,Total_Latency_ms,FPS_SAHI
-v26n_untuned_tiled_bilateral_d11_sharp_ncnn_model,0.7645,0.5223,0.5653,0.62,932.63,1055.62,2152.91,0.46
-v26m_untuned_tiled_bilateral_sharp_ncnn_model,0.7476,0.5623,0.5741,0.641,934.62,7664.7,8738.37,0.11
-v26m_untuned_tiled-6_ncnn_model,0.7407,0.5643,0.6069,0.64,0.01,7353.4,7480.42,0.13
-v26s_untuned_tiled_bilateral_d11_ncnn_model,0.7675,0.5565,0.5788,0.645,848.6,2623.44,3595.52,0.28
-v26s_untuned_tiled-3_ncnn_model,0.6741,0.6153,0.6038,0.643,0.01,2684.84,2806.0,0.36
-v26s_untuned_dehaze_bilateral_sharp_ncnn_model,0.7624,0.5288,0.5447,0.624,3192.53,2607.4,5932.05,0.17
-v26n_untuned_tiled-2_ncnn_model,0.7005,0.556,0.5766,0.619,0.01,980.43,1098.66,0.91

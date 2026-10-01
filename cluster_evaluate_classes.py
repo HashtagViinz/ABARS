@@ -14,27 +14,22 @@ TOP_MODELS = [
     "v26s_untuned_dehaze_bilateral_sharp"
 ]
 
-def get_yaml_for_model(model_name):
-    """
-    Deduce il path del file YAML del dataset in base al nome del modello.
-    Se il nome ha un run_id finale (es. -6), lo rimuove per trovare il nome del dataset.
-    """
-    # Rimuove l'identificativo della run alla fine (es: "-6", "-3") se presente
-    base_name = model_name
-    if "-" in model_name:
-        base_name = model_name.rsplit("-", 1)[0]
-    
-    # Estrae i filtri: "v26m_untuned_tiled_bilateral_sharp" -> "tiled_bilateral_sharp"
-    # Assumiamo che tutti contengano "_untuned_"
-    if "_untuned_" in base_name:
-        suffix = base_name.split("_untuned_")[1]
-    else:
-        suffix = "tiled"
-        
-    yaml_dir = f"dataset_{suffix}"
-    yaml_file = f"uavod10_{suffix}.yaml"
-    
-    return os.path.join(yaml_dir, yaml_file)
+import os
+import csv
+from pathlib import Path
+from ultralytics import YOLO
+
+# Mappatura esatta estratta dal file runs.csv di MLflow.
+# In questo modo non abbiamo bisogno del file runs.csv fisicamente sul cluster!
+MODEL_TO_YAML = {
+    "v26m_untuned_tiled-6": "dataset_tiled/uavod10_tiled.yaml",
+    "v26s_untuned_tiled-3": "dataset_tiled/uavod10_tiled.yaml",
+    "v26s_untuned_tiled_bilateral_d11": "dataset_bilateral_tiled/uavod10_bilateral_tiled.yaml",
+    "v26n_untuned_tiled-2": "dataset_tiled/uavod10_tiled.yaml",
+    "v26m_untuned_tiled_bilateral_sharp": "dataset_bilateral_sharp_tiled/uavod10_bilateral_sharp_tiled.yaml",
+    "v26n_untuned_tiled_bilateral_d11_sharp": "dataset_bilateral_tiled/uavod10_bilateral_tiled.yaml",
+    "v26s_untuned_dehaze_bilateral_sharp": "dataset_dehaze_bilateral_sharp_tiled/uavod10_dehaze_bilateral_sharp_tiled.yaml"
+}
 
 def main():
     print("="*60)
@@ -47,11 +42,10 @@ def main():
         writer = csv.writer(f)
         writer.writerow(["Model", "mAP50", "mAP50-95", "Precision", "Recall"])
         
-        for model_name in TOP_MODELS:
+        for model_name, yaml_path in MODEL_TO_YAML.items():
             print(f"\n[{model_name}] Valutazione in corso...")
             
             # Cerca il file pesi best.pt nella cartella addestrata
-            # (Adattare il path se sul cluster è diverso, es. runs/detect/...)
             pt_path = f"YOLO/trained_model/{model_name}/weights/best.pt"
             
             if not os.path.exists(pt_path):
@@ -59,9 +53,8 @@ def main():
                 print("Assicurati che i modelli si trovino nel percorso corretto sul cluster.")
                 continue
                 
-            yaml_path = get_yaml_for_model(model_name)
             if not os.path.exists(yaml_path):
-                print(f"❌ ATTENZIONE: File YAML non trovato: {yaml_path}")
+                print(f"❌ ATTENZIONE: File YAML non trovato sul cluster: {yaml_path}")
                 continue
                 
             try:
@@ -77,7 +70,7 @@ def main():
                 precision = results.results_dict.get('metrics/precision(B)', 0.0)
                 recall = results.results_dict.get('metrics/recall(B)', 0.0)
                 
-                print(f"✅ Completato! mAP50: {map50:.4f}, Precision: {precision:.4f}")
+                print(f"✅ Completato! Dataset: {yaml_path} | mAP50: {map50:.4f}, Precision: {precision:.4f}")
                 
                 writer.writerow([
                     model_name,

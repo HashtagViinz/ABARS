@@ -7,7 +7,19 @@ import numpy as np
 sns.set_theme(style="whitegrid")
 
 # Load data
-df = pd.read_csv('benchmark_metrics.csv')
+df_latency = pd.read_csv('benchmark_metrics.csv')
+df_metrics = pd.read_csv('metric_classes.csv')
+
+# Clean model names in latency df to match metrics df (remove _ncnn_model)
+df_latency['Model'] = df_latency['Model'].str.replace('_ncnn_model', '')
+
+# Merge the dataframes on the Model column
+# We take Precision from df_metrics, and FPS/Latency from df_latency
+df = pd.merge(df_latency, df_metrics, on='Model', suffixes=('_old', ''))
+
+# Drop the old precision column from latency df to avoid confusion
+df = df.drop(columns=['Precision_old'])
+
 
 # Clean model names for plotting
 def clean_name(name):
